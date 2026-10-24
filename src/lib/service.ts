@@ -1,7 +1,7 @@
 // Application service layer — the verified chain, wired end to end.
 //   submit -> anchor -> review (4 agents) -> human decision -> transfer -> anchor
 
-import { runReview } from "./agents";
+import { isTransferBlocked, runReview } from "./agents";
 import { buildReport } from "./report";
 import { routeTransfer } from "./razorpay";
 import { gemmaMode } from "./gemma";
@@ -110,11 +110,28 @@ export async function reviewExpense(expenseId: string): Promise<Expense> {
 export async function decideExpense(
   expenseId: string,
   decision: Omit<HumanDecision, "decidedAt">,
+  opts: { override?: string } = {},
 ): Promise<Expense> {
   const expense = await getExpense(expenseId);
   if (!expense) throw new Error("Expense not found");
 
-  expense.humanDecision = { ...decision, decidedAt: new Date().toISOString() };
+  // SAFETY GATE: block approving an expense the agents flagged (not permitted /
+  // missing evidence / reject) unless an explicit override reason is supplied.
+  if (decision.decision === "approve") {
+    const gate = isTransferBlocked(expense.review);
+    if (gate.blocked && !opts.override?.trim()) {
+      throw new Error(`BLOCKED: ${gate.reason} An override reason is required to approve anyway.`);
+    }
+  }
+
+  const overrideNote = opts.override?.trim()
+    ? ` [OVERRIDE: ${opts.override.trim()}]`
+    : "";
+  expense.humanDecision = {
+    ...decision,
+    note: (decision.note || "") + overrideNote,
+    decidedAt: new Date().toISOString(),
+  };
 
   if (decision.decision === "reject") {
     expense.status = "rejected";

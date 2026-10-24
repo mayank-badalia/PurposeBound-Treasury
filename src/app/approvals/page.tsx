@@ -1,6 +1,7 @@
 import { allExpenses, listCampaigns } from "@/lib/store";
 import { inr } from "@/lib/format";
 import { ReviewButton, DecisionButtons } from "@/components/Actions";
+import { isTransferBlocked } from "@/lib/agents";
 import { Findings } from "@/components/Findings";
 import { RecommendationBadge, StatusBadge, VerificationBadge } from "@/components/Badges";
 import type { Expense } from "@/lib/types";
@@ -12,6 +13,7 @@ function ExpenseCard({ e, campaignName }: { e: Expense; campaignName: string }) 
   const awaiting = e.status === "awaiting_human";
   const suggestPartial =
     e.review?.recommendation === "approve_partial" ? e.review.approvedAmount : undefined;
+  const gate = isTransferBlocked(e.review);
 
   return (
     <div className="card" style={{ padding: 18 }}>
@@ -51,7 +53,7 @@ function ExpenseCard({ e, campaignName }: { e: Expense; campaignName: string }) 
             <span style={{ color: "var(--muted)", fontSize: 13 }}>
               Recommendation: <strong>{e.review?.recommendation?.replace(/_/g, " ")}</strong>. A human must confirm.
             </span>
-            <DecisionButtons expenseId={e.id} defaultAmount={e.amount} suggestPartial={suggestPartial} />
+            <DecisionButtons expenseId={e.id} defaultAmount={e.amount} suggestPartial={suggestPartial} blocked={gate.blocked} blockReason={gate.reason} />
           </>
         )}
         {e.transfer && (

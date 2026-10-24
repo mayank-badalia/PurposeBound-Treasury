@@ -209,6 +209,20 @@ function medianAmount(expenses: Expense[]): number {
   return amts.length % 2 ? amts[mid] : (amts[mid - 1] + amts[mid]) / 2;
 }
 
+// An expense whose agents flagged it as not-permitted, missing-evidence, or
+// recommended reject/request-evidence must NOT be approved & transferred
+// without an explicit exceptional-authority override.
+export function isTransferBlocked(review?: AgentReview): { blocked: boolean; reason: string } {
+  if (!review) return { blocked: true, reason: "Not yet reviewed by the agents." };
+  if (review.verification === "not_permitted")
+    return { blocked: true, reason: "Policy violation — this expense is not permitted by the funding rules." };
+  if (review.verification === "missing_evidence" || review.recommendation === "request_evidence")
+    return { blocked: true, reason: "Required evidence is missing — supply the invoice/proof before paying." };
+  if (review.recommendation === "reject")
+    return { blocked: true, reason: "Agents recommend rejecting this request." };
+  return { blocked: false, reason: "" };
+}
+
 export function recLabel(r: Recommendation): string {
   return {
     approve_full: "Approve fully",
