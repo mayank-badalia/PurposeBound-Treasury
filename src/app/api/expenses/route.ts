@@ -20,35 +20,47 @@ function inferType(file: File, hint?: string): EvidenceType {
   return "receipt";
 }
 
-// Ask Gemma to read an uploaded document/image. Falls back to a safe default
-// (assume the invoice matches the claim) when no key is set.
-async function extract(
+// Let Gemma CLASSIFY the uploaded file (invoice / receipt / photo) and extract
+// its fields in one call. This fixes the trap where an invoice uploaded as an
+// image defaulted to "photo" and the Evidence agent then said "no invoice".
+// Falls back to the inferred type + a safe extraction when no key is set.
+async function classifyAndExtract(
   file: File,
   bytes: Uint8Array,
-  type: EvidenceType,
+  hint: string | undefined,
   claim: { vendor: string; amount: number },
-): Promise<Evidence["extracted"]> {
+): Promise<{ type: EvidenceType; extracted: Evidence["extracted"] }> {
+  const inferred = inferType(file, hint);
   if (gemmaMode() === "gemma") {
     try {
       const base64 = Buffer.from(bytes).toString("base64");
-      const prompt =
-        type === "photo" || type === "completion"
-          ? `Does this photo plausibly support a claimed expense to "${claim.vendor}" for ₹${claim.amount}? Reply ONLY JSON: {"supportsClaim": boolean, "notes": string}.`
-          : `Extract fields from this ${type}. Reply ONLY JSON: {"vendor": string, "amount": number, "date": string, "description": string, "supportsClaim": boolean}.`;
+      const prompt = `This file was uploaded as evidence for an expense to "${claim.vendor}" for ₹${claim.amount}. Classify it and extract its fields. Reply ONLY JSON: {"docType": "invoice" | "receipt" | "photo", "vendor": string|null, "amount": number|null, "date": string|null, "description": string|null, "supportsClaim": boolean}. Use "invoice" or "receipt" if it is a bill/invoice/receipt document (even a photo of one); use "photo" only for a photograph of goods/work/an event.`;
       const text = await callGemma(prompt, {
         image: { mimeType: file.type || "application/octet-stream", base64 },
         json: true,
       });
-      const parsed = tryParseJson<Evidence["extracted"]>(text);
-      if (parsed) return parsed;
+      const p = tryParseJson<{ docType?: string } & NonNullable<Evidence["extracted"]>>(text);
+      if (p) {
+        const type: EvidenceType =
+          p.docType === "invoice" || p.docType === "receipt" || p.docType === "photo"
+            ? (p.docType as EvidenceType)
+            : inferred;
+        const { docType: _docType, ...extracted } = p;
+        void _docType;
+        return { type, extracted };
+      }
     } catch (err) {
       console.warn("[extract] gemma fell back:", (err as Error).message);
     }
   }
   // Deterministic fallback: trust uploaded invoices as matching the claim.
-  return type === "photo" || type === "completion"
-    ? { supportsClaim: true, notes: "Fallback: photo accepted (no vision model configured)." }
-    : { vendor: claim.vendor, amount: claim.amount, date: new Date().toISOString().slice(0, 10), description: "Fallback extraction", supportsClaim: true };
+  return {
+    type: inferred,
+    extracted:
+      inferred === "photo" || inferred === "completion"
+        ? { supportsClaim: true, notes: "Fallback: photo accepted (no vision model configured)." }
+        : { vendor: claim.vendor, amount: claim.amount, date: new Date().toISOString().slice(0, 10), description: "Fallback extraction", supportsClaim: true },
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -73,14 +85,18 @@ export async function POST(req: NextRequest) {
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     const bytes = new Uint8Array(await file.arrayBuffer());
-    const type = inferType(file, typeHints[i]);
+
+    // Gemma classifies the document type (invoice/receipt/photo) and extracts
+    // its fields — so an invoice uploaded as an image is still treated as an
+    // invoice.
+    const { type, extracted } = await classifyAndExtract(file, bytes, typeHints[i], { vendor, amount });
 
     // Store the real document in Google Drive when connected; only the hash is
     // anchored. Falls back to a simulated id if Drive isn't connected or errors.
     let driveFileId = `drive_sim_${shortId("f").slice(2)}`;
     if (driveConnected) {
       try {
-        const subfolder = type === "invoice" ? "Invoices" : "Evidence";
+        const subfolder = type === "invoice" || type === "receipt" ? "Invoices" : "Evidence";
         const up = await uploadToDrive(file.name, file.type || "application/octet-stream", bytes, subfolder);
         driveFileId = up.fileId;
       } catch (err) {
@@ -99,7 +115,7 @@ export async function POST(req: NextRequest) {
       visualFingerprint: visualFingerprint(bytes),
       uploadedAt: new Date().toISOString(),
       driveFileId,
-      extracted: await extract(file, bytes, type, { vendor, amount }),
+      extracted,
     });
   }
 
