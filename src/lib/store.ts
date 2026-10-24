@@ -61,14 +61,37 @@ export async function save(db: Database): Promise<void> {
   await fs.writeFile(DB_FILE, JSON.stringify(db, null, 2), "utf8");
 }
 
+// Serialise every read-modify-write so concurrent requests can't clobber each
+// other's changes (the classic lost-update that wiped a review and made the
+// expense look "not reviewed"). Single process, so an in-process lock suffices.
+let __lock: Promise<unknown> = Promise.resolve();
+export async function mutate<T>(fn: (db: Database) => T | Promise<T>): Promise<T> {
+  const prev = __lock;
+  let release!: () => void;
+  __lock = new Promise<void>((r) => (release = r));
+  try {
+    await prev;
+  } catch {
+    /* previous mutation's error is its own concern */
+  }
+  try {
+    const db = await load();
+    const result = await fn(db);
+    await save(db);
+    return result;
+  } finally {
+    release();
+  }
+}
+
 export async function resetDb(): Promise<void> {
   // Preserve the Google Drive connection across data resets so a connected
   // account survives demo re-seeds.
-  const current = await load();
-  const google = current.google ?? null;
-  g.__pbtDb = { ...structuredClone(EMPTY), google };
-  g.__pbtLoaded = true;
-  await save(g.__pbtDb);
+  await mutate((db) => {
+    const google = db.google ?? null;
+    const fresh = { ...structuredClone(EMPTY), google };
+    Object.assign(db, fresh);
+  });
 }
 
 export async function getGoogle(): Promise<GoogleConnection | null> {
@@ -76,9 +99,9 @@ export async function getGoogle(): Promise<GoogleConnection | null> {
 }
 
 export async function setGoogle(conn: GoogleConnection | null): Promise<void> {
-  const db = await load();
-  db.google = conn;
-  await save(db);
+  await mutate((db) => {
+    db.google = conn;
+  });
 }
 
 // ---------- Campaigns ----------
@@ -89,12 +112,12 @@ export async function getCampaign(id: string): Promise<Campaign | undefined> {
   return (await load()).campaigns.find((c) => c.id === id);
 }
 export async function upsertCampaign(c: Campaign): Promise<Campaign> {
-  const db = await load();
-  const i = db.campaigns.findIndex((x) => x.id === c.id);
-  if (i >= 0) db.campaigns[i] = c;
-  else db.campaigns.push(c);
-  await save(db);
-  return c;
+  return mutate((db) => {
+    const i = db.campaigns.findIndex((x) => x.id === c.id);
+    if (i >= 0) db.campaigns[i] = c;
+    else db.campaigns.push(c);
+    return c;
+  });
 }
 
 // ---------- Rules ----------
@@ -102,9 +125,9 @@ export async function rulesFor(campaignId: string): Promise<Rule[]> {
   return (await load()).rules.filter((r) => r.campaignId === campaignId);
 }
 export async function replaceRules(campaignId: string, rules: Rule[]): Promise<void> {
-  const db = await load();
-  db.rules = db.rules.filter((r) => r.campaignId !== campaignId).concat(rules);
-  await save(db);
+  await mutate((db) => {
+    db.rules = db.rules.filter((r) => r.campaignId !== campaignId).concat(rules);
+  });
 }
 
 // ---------- Funds ----------
@@ -112,31 +135,31 @@ export async function fundsFor(campaignId: string): Promise<Fund[]> {
   return (await load()).funds.filter((f) => f.campaignId === campaignId);
 }
 export async function addFund(f: Fund): Promise<Fund> {
-  const db = await load();
-  db.funds.push(f);
-  await save(db);
-  return f;
+  return mutate((db) => {
+    db.funds.push(f);
+    return f;
+  });
 }
 
 // Replace all funds for a campaign (keeps re-seeding idempotent).
 export async function replaceFunds(campaignId: string, funds: Fund[]): Promise<void> {
-  const db = await load();
-  db.funds = db.funds.filter((f) => f.campaignId !== campaignId).concat(funds);
-  await save(db);
+  await mutate((db) => {
+    db.funds = db.funds.filter((f) => f.campaignId !== campaignId).concat(funds);
+  });
 }
 
 // Drop a campaign's anchors (so re-seeding the same campaign doesn't pile up).
 export async function clearAnchors(campaignId: string): Promise<void> {
-  const db = await load();
-  db.anchors = db.anchors.filter((a) => a.campaignId !== campaignId);
-  await save(db);
+  await mutate((db) => {
+    db.anchors = db.anchors.filter((a) => a.campaignId !== campaignId);
+  });
 }
 
 // Replace all expenses for a campaign.
 export async function replaceExpenses(campaignId: string, expenses: Expense[]): Promise<void> {
-  const db = await load();
-  db.expenses = db.expenses.filter((e) => e.campaignId !== campaignId).concat(expenses);
-  await save(db);
+  await mutate((db) => {
+    db.expenses = db.expenses.filter((e) => e.campaignId !== campaignId).concat(expenses);
+  });
 }
 
 // ---------- Expenses ----------
@@ -150,12 +173,12 @@ export async function getExpense(id: string): Promise<Expense | undefined> {
   return (await load()).expenses.find((e) => e.id === id);
 }
 export async function upsertExpense(e: Expense): Promise<Expense> {
-  const db = await load();
-  const i = db.expenses.findIndex((x) => x.id === e.id);
-  if (i >= 0) db.expenses[i] = e;
-  else db.expenses.push(e);
-  await save(db);
-  return e;
+  return mutate((db) => {
+    const i = db.expenses.findIndex((x) => x.id === e.id);
+    if (i >= 0) db.expenses[i] = e;
+    else db.expenses.push(e);
+    return e;
+  });
 }
 
 // All evidence across a campaign — used for duplicate detection.
@@ -178,7 +201,6 @@ export async function anchor(
   refId: string,
   content: string,
 ): Promise<HashAnchor> {
-  const db = await load();
   const digest = sha256(content);
   const a: HashAnchor = {
     id: shortId("anchor"),
@@ -190,7 +212,8 @@ export async function anchor(
     onChain: chainConfigured(),
     createdAt: new Date().toISOString(),
   };
-  db.anchors.push(a);
-  await save(db);
-  return a;
+  return mutate((db) => {
+    db.anchors.push(a);
+    return a;
+  });
 }
