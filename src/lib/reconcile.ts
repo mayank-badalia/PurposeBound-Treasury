@@ -29,6 +29,7 @@ export interface OutgoingTransfer {
   approver?: string;
   vendorLinkedAccountId: string;
   razorpayTransferId: string;
+  razorpayOrderId?: string;
   transferStatus: string;
   demo: boolean;
   deliveryEvidenceHash?: string;
@@ -81,6 +82,7 @@ export async function buildReconciliation(campaignId: string): Promise<Reconcili
         approver: e.humanDecision?.decidedBy,
         vendorLinkedAccountId: e.transfer!.linkedAccountId,
         razorpayTransferId: e.transfer!.razorpayTransferId,
+        razorpayOrderId: e.transfer!.razorpayOrderId,
         transferStatus: e.transfer!.status,
         demo: e.transfer!.demo,
         deliveryEvidenceHash: delivery?.contentHash,

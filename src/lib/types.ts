@@ -127,6 +127,7 @@ export interface Transfer {
   expenseId: string;
   amount: number;
   razorpayTransferId: string;
+  razorpayOrderId?: string; // real Razorpay order created for the payout (Route-off demo)
   linkedAccountId: string;
   status: "processed" | "failed";
   demo: boolean; // true = simulated (Route not enabled); shown as "Demo Transfer"

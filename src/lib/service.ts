@@ -3,7 +3,7 @@
 
 import { isTransferBlocked, runReview } from "./agents";
 import { buildReport } from "./report";
-import { routeTransfer } from "./razorpay";
+import { collectFunds, routeTransfer } from "./razorpay";
 import { gemmaMode } from "./gemma";
 import { shortId, sha256 } from "./hash";
 import {
@@ -145,11 +145,26 @@ export async function decideExpense(
   // transfer to the exact vendor); otherwise a per-expense placeholder account.
   const vendorAccount = expense.vendorLinkedAccountId || `acc_${expense.id.slice(4, 18)}`;
   const transfer = await routeTransfer(amount, vendorAccount);
+
+  // Route can't move real money unless it's enabled. So that approval still
+  // produces a REAL Razorpay object (visible in the dashboard) for the payout,
+  // create a real Razorpay order for the approved amount in the demo path.
+  let razorpayOrderId: string | undefined;
+  if (transfer.mode === "mock") {
+    try {
+      const order = await collectFunds(amount, `payout_${expense.id}`);
+      razorpayOrderId = order.orderId;
+    } catch (err) {
+      console.warn("[payout-order] could not create Razorpay order:", (err as Error).message);
+    }
+  }
+
   expense.transfer = {
     id: shortId("trf"),
     expenseId: expense.id,
     amount,
     razorpayTransferId: transfer.transferId,
+    razorpayOrderId,
     linkedAccountId: transfer.linkedAccountId,
     status: transfer.status,
     demo: transfer.mode === "mock", // simulated until Route is enabled

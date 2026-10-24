@@ -137,7 +137,7 @@ export default async function Dashboard() {
                 </div>
                 <div style={{ fontSize: 12, color: "var(--muted)" }}>{t.chain}</div>
                 <div className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
-                  {t.razorpayTransferId} → {t.vendorLinkedAccountId}{t.invoiceHash ? ` · inv ${t.invoiceHash.slice(0, 10)}…` : ""}
+                  {t.razorpayOrderId ?? t.razorpayTransferId} → {t.vendorLinkedAccountId}{t.invoiceHash ? ` · inv ${t.invoiceHash.slice(0, 10)}…` : ""}
                 </div>
               </div>
             ))}
