@@ -62,6 +62,7 @@ export interface SubmitInput {
   amount: number;
   vendor: string;
   recipient: string;
+  vendorLinkedAccountId?: string;
   description: string;
   evidence: Evidence[];
 }
@@ -75,6 +76,7 @@ export async function submitExpense(input: SubmitInput): Promise<Expense> {
     amount: input.amount,
     vendor: input.vendor.trim(),
     recipient: input.recipient.trim() || input.vendor.trim(),
+    vendorLinkedAccountId: input.vendorLinkedAccountId?.trim() || undefined,
     description: input.description.trim(),
     status: "submitted",
     createdAt: now,
@@ -122,7 +124,10 @@ export async function decideExpense(
 
   const amount = decision.approvedAmount || expense.amount;
 
-  const transfer = await routeTransfer(amount, shortId("acc"));
+  // Transfer to the vendor's linked account when provided (ties the outgoing
+  // transfer to the exact vendor); otherwise a per-expense placeholder account.
+  const vendorAccount = expense.vendorLinkedAccountId || `acc_${expense.id.slice(4, 18)}`;
+  const transfer = await routeTransfer(amount, vendorAccount);
   expense.transfer = {
     id: shortId("trf"),
     expenseId: expense.id,

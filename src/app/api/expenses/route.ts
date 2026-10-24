@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
   const amount = Number(form.get("amount") || 0);
   const vendor = String(form.get("vendor") || "");
   const recipient = String(form.get("recipient") || "");
+  const vendorLinkedAccountId = String(form.get("vendorLinkedAccountId") || "");
   const description = String(form.get("description") || "");
 
   if (!campaignId || !category || !amount || !vendor) {
@@ -108,6 +109,7 @@ export async function POST(req: NextRequest) {
     amount,
     vendor,
     recipient,
+    vendorLinkedAccountId,
     description,
     evidence,
   });

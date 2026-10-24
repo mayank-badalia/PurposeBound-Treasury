@@ -140,6 +140,7 @@ export interface Expense {
   amount: number;
   vendor: string;
   recipient: string;
+  vendorLinkedAccountId?: string; // Razorpay Route linked account for the vendor
   description: string;
   status: ExpenseStatus;
   createdAt: string;

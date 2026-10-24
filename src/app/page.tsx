@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { listCampaigns, rulesFor, fundsFor, expensesFor, anchorsFor } from "@/lib/store";
 import { computePosition } from "@/lib/budget";
+import { buildReconciliation } from "@/lib/reconcile";
 import { inr } from "@/lib/format";
 import { SeedDemoButton } from "@/components/Actions";
+import SponsorPayment from "@/components/SponsorPayment";
 import { StatusBadge, VerificationBadge } from "@/components/Badges";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +48,7 @@ export default async function Dashboard() {
   ]);
   const pos = computePosition(funds, expenses, rules);
   const awaiting = expenses.filter((e) => e.status === "awaiting_human").length;
+  const recon = await buildReconciliation(campaign.id);
 
   return (
     <div>
@@ -59,9 +62,10 @@ export default async function Dashboard() {
             {campaign.synthetic && <span className="chip" style={{ marginLeft: 8 }}>SYNTHETIC</span>}
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
+          <SponsorPayment campaignId={campaign.id} />
           <Link className="btn" href="/approvals">Approvals{awaiting ? ` (${awaiting})` : ""}</Link>
-          <Link className="btn btn-primary" href={`/report/${campaign.id}`}>Transparency report</Link>
+          <Link className="btn" href={`/report/${campaign.id}`}>Transparency report</Link>
         </div>
       </div>
 
@@ -98,6 +102,46 @@ export default async function Dashboard() {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Money chain — reconciliation (incoming sponsor payments <-> outgoing transfers) */}
+      <div className="card" style={{ padding: 18, marginTop: 18 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+          <div style={{ fontWeight: 800 }}>Money chain · verified reconciliation</div>
+          <span className="chip" style={{ color: recon.reconciled ? "var(--ok)" : "var(--danger)", borderColor: recon.reconciled ? "var(--ok)" : "var(--danger)" }}>
+            {recon.reconciled ? "reconciled" : "over-transferred"} · in {inr(recon.totalReceived)} / out {inr(recon.totalTransferred)}
+          </span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div>
+            <div className="label" style={{ margin: "0 0 8px" }}>Incoming — sponsor payments</div>
+            {recon.incoming.length === 0 && <div style={{ color: "var(--muted)", fontSize: 13 }}>No sponsor payments yet. Use “Request sponsor payment”.</div>}
+            {recon.incoming.map((p) => (
+              <div key={p.fundId} style={{ border: "1px solid var(--border)", borderRadius: 10, padding: 10, marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <strong>{p.sponsor}</strong><span style={{ fontWeight: 800, color: "var(--brand)" }}>{inr(p.amount)}</span>
+                </div>
+                <div className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>{p.razorpayOrderId} · {p.razorpayPaymentId} · {p.status}</div>
+              </div>
+            ))}
+          </div>
+          <div>
+            <div className="label" style={{ margin: "0 0 8px" }}>Outgoing — vendor transfers</div>
+            {recon.outgoing.length === 0 && <div style={{ color: "var(--muted)", fontSize: 13 }}>No transfers yet.</div>}
+            {recon.outgoing.map((t) => (
+              <div key={t.expenseId} style={{ border: "1px solid var(--border)", borderRadius: 10, padding: 10, marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <strong>{t.vendor}</strong>
+                  <span style={{ fontWeight: 800, color: t.demo ? "var(--warn)" : "var(--ok)" }}>{inr(t.approvedAmount)}{t.demo ? " · Demo" : ""}</span>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--muted)" }}>{t.chain}</div>
+                <div className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
+                  {t.razorpayTransferId} → {t.vendorLinkedAccountId}{t.invoiceHash ? ` · inv ${t.invoiceHash.slice(0, 10)}…` : ""}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
