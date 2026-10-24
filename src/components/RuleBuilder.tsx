@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 interface DraftRule {
   id: string;
@@ -34,6 +34,26 @@ export default function RuleBuilder() {
   const [rules, setRules] = useState<DraftRule[] | null>(null);
   const [source, setSource] = useState<string>("");
   const [locked, setLocked] = useState(false);
+  const [mouBusy, setMouBusy] = useState(false);
+  const [mouInfo, setMouInfo] = useState<{ filename: string; source: string; driveLink?: string } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const readMou = async (file: File) => {
+    setMouBusy(true);
+    setMouInfo(null);
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+      const res = await fetch("/api/mou/read", { method: "POST", body: fd });
+      const j = await res.json();
+      if (j.ok) {
+        if (j.text) setDoc(j.text);
+        setMouInfo({ filename: j.filename, source: j.source, driveLink: j.driveLink });
+      }
+    } finally {
+      setMouBusy(false);
+    }
+  };
 
   const extract = async () => {
     setBusy(true);
@@ -85,7 +105,27 @@ export default function RuleBuilder() {
           </div>
         </div>
         <div style={{ marginTop: 10 }}>
-          <span className="label">Funding agreement / proposal / budget</span>
+          <span className="label">Upload MOU / agreement (image or PDF) — or paste below</span>
+          <div
+            onClick={() => fileRef.current?.click()}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files[0]) readMou(e.dataTransfer.files[0]); }}
+            style={{ border: "1.5px dashed var(--border)", borderRadius: 12, padding: 16, textAlign: "center", cursor: "pointer", color: "var(--muted)" }}
+          >
+            <div style={{ fontWeight: 700, color: "var(--text)" }}>📄 {mouBusy ? "Gemma is reading the document…" : "Upload MOU (image / PDF)"}</div>
+            <div style={{ fontSize: 13 }}>Gemma transcribes it into the box below; the original is saved to Google Drive.</div>
+            <input ref={fileRef} type="file" accept="image/*,.pdf" style={{ display: "none" }}
+              onChange={(e) => { if (e.target.files?.[0]) readMou(e.target.files[0]); }} />
+          </div>
+          {mouInfo && (
+            <div className="chip" style={{ marginTop: 8, color: "var(--ok)", borderColor: "var(--ok)" }}>
+              {mouInfo.source === "gemma" ? "Read by Gemma" : "Uploaded"}: {mouInfo.filename}
+              {mouInfo.driveLink && <> · <a href={mouInfo.driveLink} target="_blank" rel="noreferrer" style={{ color: "var(--brand-2)" }}>view in Drive ↗</a></>}
+            </div>
+          )}
+        </div>
+        <div style={{ marginTop: 10 }}>
+          <span className="label">Funding agreement / proposal / budget (editable)</span>
           <textarea className="textarea" rows={9} value={doc} onChange={(e) => setDoc(e.target.value)} />
         </div>
         <div style={{ marginTop: 12 }}>
