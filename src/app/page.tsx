@@ -201,27 +201,33 @@ function SectionHead({ eyebrow, title }: { eyebrow: string; title: string }) {
   );
 }
 
+const FLOW = ["Purpose", "Rule", "Evidence", "AI review", "Human", "Transfer", "Report"];
+
 function Hero() {
   return (
-    <section
-      className="card reveal reveal-1 in"
-      style={{ padding: "40px 40px 44px", position: "relative", overflow: "hidden", background: "linear-gradient(135deg, #fffdfb 0%, #fdeef1 100%)" }}
-    >
-      <div className="ribbon" style={{ width: 520, height: 320, right: -120, top: -80 }} />
-      <div style={{ position: "relative", maxWidth: 820 }}>
-        <div className="eyebrow" style={{ marginBottom: 14 }}>From agreements to action</div>
-        <h1 className="rise display" style={{ fontSize: "clamp(34px, 5vw, 58px)", lineHeight: 1.04 }}>
+    <section className="card hero reveal reveal-1 in">
+      <div className="ribbon hero-ribbon" />
+      <div className="hero-body">
+        <div className="eyebrow" style={{ marginBottom: 16 }}>From agreements to action</div>
+        <h1 className="rise display hero-title">
           <span>Every rupee. Every promise.</span>
         </h1>
-        <p style={{ color: "var(--body)", marginTop: 16, maxWidth: 640, fontSize: 16.5, lineHeight: 1.6 }}>
+        <p className="hero-lead">
           Turn funding promises into enforceable spending rules. Gemma reads every invoice and photo,
           the budget stays guarded, and a Razorpay transfer releases only when an expense matches its
-          declared purpose — with every step hash-anchored.
+          declared purpose — every step hash-anchored.
         </p>
-        <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
-          <span className="chip" style={{ background: "rgba(255,255,255,0.7)" }}>
-            Purpose → Rule → Evidence → AI review → Human → Transfer → Report
-          </span>
+        <div className="hero-flow-label">
+          <span className="hero-flow-rule" />
+          <span className="eyebrow" style={{ color: "var(--muted)" }}>The lifecycle of a rupee</span>
+        </div>
+        <div className="flowline">
+          {FLOW.map((s, i) => (
+            <div className="flowstep" key={s}>
+              <span className="flowdot" data-edge={i === 0 ? "start" : i === FLOW.length - 1 ? "end" : undefined} />
+              <span className="flowlabel">{s}</span>
+            </div>
+          ))}
         </div>
       </div>
     </section>

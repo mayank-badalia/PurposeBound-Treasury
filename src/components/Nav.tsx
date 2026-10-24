@@ -15,21 +15,15 @@ export default function Nav() {
   const path = usePathname();
   const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
   return (
-    <nav style={{ display: "flex", gap: 22, flexWrap: "wrap", alignItems: "center" }}>
+    <nav className="site-nav">
       {NAV.map((n) => {
         const active = isActive(n.href);
         return (
           <Link
             key={n.href}
             href={n.href}
-            style={{
-              fontSize: 14.5,
-              fontWeight: active ? 600 : 500,
-              color: active ? "var(--brand)" : "var(--body)",
-              paddingBottom: 3,
-              borderBottom: active ? "2px solid var(--brand)" : "2px solid transparent",
-              transition: "color 0.18s ease, border-color 0.18s ease",
-            }}
+            className={`nav-link${active ? " is-active" : ""}`}
+            aria-current={active ? "page" : undefined}
           >
             {n.label}
           </Link>

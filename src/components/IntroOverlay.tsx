@@ -22,11 +22,9 @@ export default function IntroOverlay() {
 
   useEffect(() => {
     const root = document.documentElement;
-    try {
-      sessionStorage.setItem("pb_intro", "1");
-    } catch {
-      /* private mode — ignore */
-    }
+    // Plays on every full page load. The layout (and this overlay) do NOT
+    // remount on in-app navigation, so switching pages never replays it.
+    // `intro-done` is only pre-set for reduced-motion (see layout inline script).
     if (root.classList.contains("intro-done")) return;
 
     const svg = hostRef.current?.querySelector("svg") as SVGSVGElement | null;
