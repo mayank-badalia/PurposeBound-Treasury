@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Declared so Chrome's Auto Dark Mode never re-inverts our own dark theme. */
+  color-scheme: dark;
+  --bg: #0b1020;
+  --panel: #121a30;
+  --panel-2: #0f1628;
+  --border: #223052;
+  --text: #e8edf7;
+  --muted: #94a3c4;
+  --brand: #34d399; /* emerald */
+  --brand-2: #22d3ee; /* cyan */
+  --warn: #f59e0b;
+  --danger: #f87171;
+  --ok: #34d399;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer base {
+  body {
+    background:
+      radial-gradient(1200px 600px at 100% -10%, rgba(34, 211, 238, 0.08), transparent),
+      radial-gradient(900px 500px at -10% 10%, rgba(52, 211, 153, 0.08), transparent),
+      var(--bg);
+    min-height: 100vh;
+  }
+  a { color: inherit; }
+}
+
+@layer components {
+  .card {
+    background: linear-gradient(180deg, var(--panel), var(--panel-2));
+    border: 1px solid var(--border);
+    border-radius: 16px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.03);
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.04);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .btn:hover { background: rgba(255, 255, 255, 0.09); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary {
+    background: linear-gradient(180deg, var(--brand), #10b981);
+    border-color: transparent;
+    color: #042016;
+  }
+  .btn-primary:hover { filter: brightness(1.06); background: linear-gradient(180deg, var(--brand), #10b981); }
+  .btn-danger { border-color: rgba(248,113,113,0.4); color: var(--danger); }
+  .input, .textarea, .select {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-size: 14px;
+  }
+  .input:focus, .textarea:focus, .select:focus {
+    outline: none;
+    border-color: var(--brand);
+  }
+  .label { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 6px; display:block; text-transform: uppercase; letter-spacing: 0.04em; }
+}
+
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
