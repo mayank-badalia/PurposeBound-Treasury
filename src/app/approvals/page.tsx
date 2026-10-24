@@ -55,8 +55,12 @@ function ExpenseCard({ e, campaignName }: { e: Expense; campaignName: string }) 
           </>
         )}
         {e.transfer && (
-          <span className="chip mono" style={{ color: "var(--ok)" }}>
-            transfer {e.transfer.razorpayTransferId} · {inr(e.transfer.amount)}
+          <span
+            className="chip mono"
+            style={{ color: e.transfer.demo ? "var(--warn)" : "var(--ok)", borderColor: e.transfer.demo ? "var(--warn)" : "var(--border)" }}
+            title={e.transfer.demo ? "Simulated — Razorpay Route not yet enabled" : "Live Razorpay Route transfer"}
+          >
+            {e.transfer.demo ? "Demo Transfer" : "Route transfer"} · {e.transfer.razorpayTransferId} · {inr(e.transfer.amount)}
           </span>
         )}
       </div>

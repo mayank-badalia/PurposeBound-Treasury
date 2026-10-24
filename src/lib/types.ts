@@ -129,6 +129,7 @@ export interface Transfer {
   razorpayTransferId: string;
   linkedAccountId: string;
   status: "processed" | "failed";
+  demo: boolean; // true = simulated (Route not enabled); shown as "Demo Transfer"
   createdAt: string;
 }
 

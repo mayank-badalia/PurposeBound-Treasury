@@ -149,7 +149,7 @@ export async function GET() {
   const reg: Expense = {
     ...mkExpense(ds.campaign.id, { category: "venue", amount: 136400, vendor: "GrandHall" }),
     status: "transferred",
-    transfer: { id: "t", expenseId: "x", amount: 120000, razorpayTransferId: "trf", linkedAccountId: "a", status: "processed", createdAt: "" },
+    transfer: { id: "t", expenseId: "x", amount: 120000, razorpayTransferId: "trf", linkedAccountId: "a", status: "processed", demo: true, createdAt: "" },
     review: { verification: "verified", findings: [], recommendation: "approve_partial", approvedAmount: 107800, rationale: "", anomalyScore: 0, reviewedAt: "" },
     humanDecision: { decision: "approve", approvedAmount: 120000, decidedBy: "", note: "", decidedAt: "" },
   };

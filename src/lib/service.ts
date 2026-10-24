@@ -130,6 +130,7 @@ export async function decideExpense(
     razorpayTransferId: transfer.transferId,
     linkedAccountId: transfer.linkedAccountId,
     status: transfer.status,
+    demo: transfer.mode === "mock", // simulated until Route is enabled
     createdAt: new Date().toISOString(),
   };
   expense.status = transfer.status === "processed" ? "transferred" : "on_hold";

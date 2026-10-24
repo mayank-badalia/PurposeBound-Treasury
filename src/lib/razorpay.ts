@@ -16,6 +16,13 @@ export function razorpayMode(): RazorpayMode {
     : "mock";
 }
 
+// Route (vendor transfers) is a separate approval from the test keys. Until it
+// is enabled on the account, keep transfers simulated. Flip RAZORPAY_ROUTE_ENABLED
+// to true once approved — the real transfer API is used with no UI change.
+export function routeEnabled(): boolean {
+  return razorpayMode() === "sandbox" && process.env.RAZORPAY_ROUTE_ENABLED === "true";
+}
+
 function auth(): string {
   return Buffer.from(
     `${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`,
@@ -67,7 +74,7 @@ export async function routeTransfer(
   amountInr: number,
   linkedAccountId: string,
 ): Promise<TransferResult> {
-  if (razorpayMode() === "sandbox") {
+  if (routeEnabled()) {
     try {
       const res = await fetch("https://api.razorpay.com/v1/transfers", {
         method: "POST",
