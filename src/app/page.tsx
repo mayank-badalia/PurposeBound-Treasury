@@ -57,7 +57,7 @@ export default async function Dashboard() {
     <div>
       <Hero />
 
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", margin: "34px 0 16px", gap: 16, flexWrap: "wrap" }}>
+      <div className="reveal" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", margin: "34px 0 16px", gap: 16, flexWrap: "wrap" }}>
         <div>
           <div className="eyebrow" style={{ marginBottom: 8 }}>Treasury in action</div>
           <h2 className="display" style={{ fontSize: 34 }}>
@@ -75,7 +75,7 @@ export default async function Dashboard() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(176px, 1fr))", gap: 12 }}>
+      <div className="reveal reveal-1" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(176px, 1fr))", gap: 12 }}>
         <Stat label="Collected" value={pos.collected} sub="via Razorpay" />
         <Stat label="Transferred" value={pos.transferred} accent="var(--brand)" sub="to verified vendors" />
         <Stat label="Approved · unpaid" value={pos.approvedUnpaid} />
@@ -84,7 +84,7 @@ export default async function Dashboard() {
       </div>
 
       {/* Category protection */}
-      <section className="card" style={{ padding: 22, marginTop: 20 }}>
+      <section className="card reveal" style={{ padding: 22, marginTop: 20 }}>
         <SectionHead eyebrow="Guardrails" title="Protected allocations & caps" />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12, marginTop: 14 }}>
           {pos.categories.length === 0 && <div style={{ color: "var(--muted)" }}>No category commitments yet.</div>}
@@ -115,7 +115,7 @@ export default async function Dashboard() {
       </section>
 
       {/* Money chain — reconciliation */}
-      <section className="card" style={{ padding: 22, marginTop: 20 }}>
+      <section className="card reveal" style={{ padding: 22, marginTop: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
           <SectionHead eyebrow="Transparency" title="Money chain · verified reconciliation" />
           <span className="chip" style={{ color: recon.reconciled ? "var(--ok)" : "var(--danger)", borderColor: recon.reconciled ? "var(--ok)" : "var(--danger)" }}>
@@ -156,7 +156,7 @@ export default async function Dashboard() {
       </section>
 
       {/* Expenses */}
-      <section className="card" style={{ padding: 22, marginTop: 20 }}>
+      <section className="card reveal" style={{ padding: 22, marginTop: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <SectionHead eyebrow="Requests" title="Expenses" />
           <Link className="btn" href="/expenses/new" style={{ padding: "7px 14px" }}>+ Submit expense</Link>

@@ -16,7 +16,7 @@ function ExpenseCard({ e, campaignName }: { e: Expense; campaignName: string }) 
   const gate = isTransferBlocked(e.review);
 
   return (
-    <div className="card" style={{ padding: 18 }}>
+    <div className="card reveal" style={{ padding: 18 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
         <div>
           <div style={{ fontWeight: 800, fontSize: 16 }}>

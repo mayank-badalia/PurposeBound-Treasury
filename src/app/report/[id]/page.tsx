@@ -33,7 +33,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px,1fr))", gap: 12 }}>
+      <div className="reveal" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px,1fr))", gap: 12 }}>
         {[
           ["Collected", inr(report.collected), "var(--text)"],
           ["Transferred", inr(report.spent), "var(--brand)"],
@@ -48,7 +48,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* Compliance with the declared purpose */}
-      <div className="card" style={{ padding: 18 }}>
+      <div className="card reveal" style={{ padding: 18 }}>
         <div style={{ fontWeight: 800, marginBottom: 12 }}>Compliance with the original purpose</div>
         <div style={{ display: "grid", gap: 8 }}>
           {report.compliance.map((c, i) => {
@@ -64,7 +64,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* Category utilisation */}
-      <div className="card" style={{ padding: 18 }}>
+      <div className="card reveal" style={{ padding: 18 }}>
         <div style={{ fontWeight: 800, marginBottom: 12 }}>Category-wise utilisation</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px,1fr))", gap: 10 }}>
           {report.categories.map((c) => (
@@ -79,7 +79,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* Expenses */}
-      <div className="card" style={{ padding: 18 }}>
+      <div className="card reveal" style={{ padding: 18 }}>
         <div style={{ fontWeight: 800, marginBottom: 12 }}>Expenses</div>
         <div style={{ display: "grid", gap: 8 }}>
           {report.expenses.map((e) => (
@@ -96,7 +96,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* Hash anchors — tamper-evident chain of custody */}
-      <div className="card" style={{ padding: 18 }}>
+      <div className="card reveal" style={{ padding: 18 }}>
         <div style={{ fontWeight: 800, marginBottom: 6 }}>Tamper-proof hash anchors</div>
         <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 12 }}>
           Only hashes are anchored — the private documents stay in Google Drive. {report.anchors[0]?.onChain ? "Anchored on-chain." : "Chain anchoring simulated (no chain configured)."}

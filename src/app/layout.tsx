@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 import Nav from "@/components/Nav";
+import IntroOverlay from "@/components/IntroOverlay";
+import ScrollReveal from "@/components/ScrollReveal";
 import { gemmaMode } from "@/lib/gemma";
 import { razorpayMode } from "@/lib/razorpay";
 import { chainConfigured } from "@/lib/hash";
@@ -29,7 +31,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const driveConn = await getGoogle();
   const driveReady = driveConfigured();
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -37,8 +39,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Inter:wght@400;500;600;700&family=UnifrakturCook:wght@700&family=DM+Mono:wght@400;500&display=swap"
           rel="stylesheet"
         />
+        {/* No-flash: skip the intro before first paint if it's already been seen
+            this session or the viewer prefers reduced motion. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{if(sessionStorage.getItem('pb_intro')||matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentElement.classList.add('intro-done')}}catch(e){}",
+          }}
+        />
       </head>
       <body>
+        <IntroOverlay />
+        <ScrollReveal />
         <header
           style={{
             borderBottom: "1px solid var(--border)",
