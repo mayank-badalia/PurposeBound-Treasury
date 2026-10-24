@@ -346,6 +346,8 @@ html.intro-done .intro {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: clamp(22px, 3vw, 44px);
+  /* leave room for the slabs' extruded 3D shadow so it doesn't crowd the next section */
+  padding-bottom: 30px;
 }
 .slab { perspective: 1300px; }
 .slab-inner {

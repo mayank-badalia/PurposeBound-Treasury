@@ -12,7 +12,7 @@ const BLOCKS = [
 
 export default function HowItWorks() {
   return (
-    <section style={{ marginTop: 46 }}>
+    <section style={{ marginTop: 54, marginBottom: 44 }}>
       <div
         className="reveal"
         style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 20, flexWrap: "wrap", marginBottom: 26 }}
