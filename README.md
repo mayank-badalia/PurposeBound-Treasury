@@ -2,7 +2,7 @@
 
 **Every rupee connected to its promised purpose.**
 
-An AI-powered transparency and fund-control platform for NGOs, student bodies, communities and sponsored events. It turns funding promises into enforceable spending rules, verifies invoices and photo evidence with **Gemma**, guards the live budget, and releases **Razorpay** transfers only when an expense matches its declared purpose — with every step hash-anchored.
+An AI-powered transparency and fund control platform for NGOs, student bodies, communities and sponsored events. It turns funding promises into enforceable spending rules, verifies invoices and photo evidence with **Gemma**, guards the live budget, and releases **Razorpay** transfers only when an expense matches its declared purpose — with every step hash-anchored.
 
 > Built for Track 2 (Gemma). Runs **fully offline** out of the box with deterministic, clearly-labelled fallbacks; add API keys to turn each integration live.
 
