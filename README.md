@@ -1,5 +1,7 @@
 # PurposeBound Treasury
 
+This is the ppt link: https://docs.google.com/presentation/d/1im1jMk_kfsf1cOfq1SbmkWUobZm_gxXy/edit?usp=sharing&ouid=105289269091882012248&rtpof=true&sd=true
+
 **Every rupee connected to its promised purpose.**
 
 An AI-powered transparency and fund control platform for NGOs, student bodies, communities and sponsored events. It turns funding promises into enforceable spending rules, verifies invoices and photo evidence with **Gemma**, guards the live budget, and releases **Razorpay** transfers only when an expense matches its declared purpose — with every step hash-anchored.
