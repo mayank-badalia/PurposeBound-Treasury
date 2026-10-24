@@ -1,80 +1,87 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { INTRO_SVG } from "./introSequenceSvg";
 
-const WORD = "PurposeBound";
+// The designer SVG is a 12s loop. We drive its SMIL timeline by hand so it
+// plays ONCE and fast: traverse ~10.6s of the timeline (letter-reveal →
+// fluid → settle, stopping just before the loop resets) in ~3.3s of real time.
+const REAL_MS = 3300;
+const SVG_SECONDS = 10.6;
 
 /**
- * Cinematic opening sequence (scenes 1–4 from the motion spec):
- *   1. Letter reveal   — the blackletter wordmark assembles, letter by letter
- *   2. Fluid motion    — liquid-pink light sweeps in behind it
- *   3. Hold            — the mark settles, "Treasury" tracks out below
- *   4. Page reveal     — the whole sheet lifts away, uncovering the app
- *
- * Pure CSS/DOM, no WebGL and no new dependencies. Plays once per session,
- * is skippable (click or any key), and is bypassed entirely under
- * prefers-reduced-motion (handled by the no-flash inline script in layout).
+ * Cinematic opening sequence, built from the brand's own
+ * PurposeBound_Treasury_Full_Sequence.svg (letter reveal → liquid motion →
+ * hold), then a page-reveal wipe. Plays once per session, is skippable
+ * (click / any key), and is bypassed under prefers-reduced-motion (handled
+ * by the no-flash inline script in layout).
  */
 export default function IntroOverlay() {
-  const ref = useRef<HTMLDivElement>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
   const [pct, setPct] = useState(0);
 
   useEffect(() => {
     const root = document.documentElement;
-    // Remember for the rest of the session so a reload doesn't replay it.
     try {
       sessionStorage.setItem("pb_intro", "1");
     } catch {
       /* private mode — ignore */
     }
-
-    // Already handled before paint (seen this session, or reduced motion).
     if (root.classList.contains("intro-done")) return;
+
+    const svg = hostRef.current?.querySelector("svg") as SVGSVGElement | null;
+    try {
+      svg?.pauseAnimations?.();
+    } catch {
+      /* SMIL not controllable — the CSS failsafe still dismisses the overlay */
+    }
 
     let raf = 0;
     let timer = 0;
+    let finished = false;
     const finish = () => {
+      if (finished) return;
+      finished = true;
       root.classList.add("intro-done");
-      window.removeEventListener("keydown", onKey);
       cancelAnimationFrame(raf);
       window.clearTimeout(timer);
+      window.removeEventListener("keydown", onKey);
     };
     const onKey = () => finish();
 
-    // Loading counter 0 → 100 over the first ~2s.
     const start = performance.now();
-    const DUR = 2000;
     const tick = (t: number) => {
-      const p = Math.min(1, (t - start) / DUR);
+      const p = Math.min(1, (t - start) / REAL_MS);
+      try {
+        svg?.setCurrentTime?.(p * SVG_SECONDS);
+      } catch {
+        /* ignore */
+      }
       setPct(Math.round(p * 100));
       if (p < 1) raf = requestAnimationFrame(tick);
+      else finish();
     };
     raf = requestAnimationFrame(tick);
 
-    // Auto-advance to the page reveal.
-    timer = window.setTimeout(finish, 2850);
+    // Never trap the viewer under the overlay if a frame loop stalls.
+    timer = window.setTimeout(finish, REAL_MS + 1200);
     window.addEventListener("keydown", onKey, { once: true });
 
     return () => {
-      window.removeEventListener("keydown", onKey);
       cancelAnimationFrame(raf);
       window.clearTimeout(timer);
+      window.removeEventListener("keydown", onKey);
     };
   }, []);
 
   return (
-    <div ref={ref} className="intro" aria-hidden="true" onClick={() => document.documentElement.classList.add("intro-done")}>
+    <div
+      className="intro"
+      aria-hidden="true"
+      onClick={() => document.documentElement.classList.add("intro-done")}
+    >
       <div className="intro-fluid" />
-      <div className="intro-inner">
-        <div className="intro-word black-letter">
-          {WORD.split("").map((ch, i) => (
-            <span key={i} style={{ animationDelay: `${0.055 * i}s` }}>
-              {ch}
-            </span>
-          ))}
-        </div>
-        <div className="intro-sub">Treasury</div>
-      </div>
+      <div className="intro-stage" ref={hostRef} dangerouslySetInnerHTML={{ __html: INTRO_SVG }} />
       <div className="intro-load">
         <span>Loading visuals</span>
         <span>{pct}%</span>

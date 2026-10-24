@@ -6,6 +6,7 @@ import { inr } from "@/lib/format";
 import { SeedDemoButton } from "@/components/Actions";
 import SponsorPayment from "@/components/SponsorPayment";
 import CountUp from "@/components/CountUp";
+import HowItWorks from "@/components/HowItWorks";
 import { StatusBadge, VerificationBadge } from "@/components/Badges";
 
 export const dynamic = "force-dynamic";
@@ -56,6 +57,8 @@ export default async function Dashboard() {
   return (
     <div>
       <Hero />
+
+      <HowItWorks />
 
       <div className="reveal" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", margin: "34px 0 16px", gap: 16, flexWrap: "wrap" }}>
         <div>
