@@ -17,17 +17,26 @@ export async function POST(req: NextRequest) {
   if (!name || !sourceDocument) {
     return NextResponse.json({ ok: false, error: "name and sourceDocument required" }, { status: 400 });
   }
-  const campaign: Campaign = {
-    id: shortId("camp"),
-    name,
-    organiser: organiser || "Organiser",
-    description: description || "",
-    sourceDocument,
-    status: "draft",
-    rulesLocked: false,
-    createdAt: new Date().toISOString(),
-    synthetic: false,
-  };
+
+  // Re-use an existing campaign with the same name instead of creating a
+  // duplicate — so re-running the Rule Builder keeps funds + expenses attached
+  // to ONE campaign (no more "funded one, spent on another empty one").
+  const existing = (await listCampaigns()).find(
+    (c) => c.name.trim().toLowerCase() === name.trim().toLowerCase(),
+  );
+  const campaign: Campaign = existing
+    ? { ...existing, organiser: organiser || existing.organiser, description: description || existing.description, sourceDocument }
+    : {
+        id: shortId("camp"),
+        name,
+        organiser: organiser || "Organiser",
+        description: description || "",
+        sourceDocument,
+        status: "draft",
+        rulesLocked: false,
+        createdAt: new Date().toISOString(),
+        synthetic: false,
+      };
   await upsertCampaign(campaign);
   const { rules, source } = await extractRules(campaign.id, sourceDocument);
   return NextResponse.json({ ok: true, campaign, draftRules: rules, source });
