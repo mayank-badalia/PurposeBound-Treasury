@@ -26,7 +26,7 @@ function ExpenseCard({ e, campaignName }: { e: Expense; campaignName: string }) 
           <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 2 }}>{campaignName}</div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 20, fontWeight: 900 }}>{inr(e.amount)}</div>
+          <div className="serif" style={{ fontSize: 24, fontWeight: 600, color: "var(--text)" }}>{inr(e.amount)}</div>
           <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginTop: 4, flexWrap: "wrap" }}>
             <VerificationBadge v={e.review?.verification} />
             <RecommendationBadge r={e.review?.recommendation} />
@@ -79,8 +79,9 @@ export default async function ApprovalsPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 24, fontWeight: 900 }}>Multi-Agent Approvals</h1>
-      <p style={{ color: "var(--muted)", maxWidth: 680, marginTop: 6, marginBottom: 18 }}>
+      <div className="eyebrow" style={{ marginBottom: 10 }}>Four checks, one accountable decision</div>
+      <h1 className="display" style={{ fontSize: "clamp(30px, 4vw, 46px)" }}>Every request, examined.</h1>
+      <p style={{ color: "var(--body)", maxWidth: 680, marginTop: 12, marginBottom: 30, fontSize: 15.5, lineHeight: 1.6 }}>
         Four agents — Policy, Evidence, Budget and Auditor — review each expense. The Auditor only recommends;
         an authorised human confirms before any Razorpay transfer occurs.
       </p>

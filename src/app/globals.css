@@ -3,92 +3,181 @@
 @tailwind utilities;
 
 :root {
-  /* Declared so Chrome's Auto Dark Mode never re-inverts our own dark theme. */
-  color-scheme: dark;
-  --bg: #0b1020;
-  --panel: #121a30;
-  --panel-2: #0f1628;
-  --border: #223052;
-  --text: #e8edf7;
-  --muted: #94a3c4;
-  --brand: #34d399; /* emerald */
-  --brand-2: #22d3ee; /* cyan */
-  --warn: #f59e0b;
-  --danger: #f87171;
-  --ok: #34d399;
+  /* Declared so Chrome's Auto Dark Mode never inverts this warm editorial theme. */
+  color-scheme: only light;
+
+  /* Editorial palette — warm cream + burgundy ink + liquid pink. */
+  --bg: #fcf5ee;           /* warm cream canvas */
+  --panel: #fffdfb;        /* card surface (warm near-white) */
+  --panel-2: #fbeef0;      /* inset / input (pale pink-cream) */
+  --pink: #fbe3ea;         /* highlight pink */
+  --pink-ink: #f3c9d6;     /* ribbon pink */
+  --border: #e9dccf;       /* warm hairline */
+  --border-strong: #d8c3b4;
+  --text: #2a0c18;         /* deep wine ink (headlines) */
+  --body: #4a3139;         /* body text */
+  --muted: #94727b;        /* muted mauve */
+  --brand: #7a0f2e;        /* burgundy */
+  --brand-ink: #5c0a22;    /* deep burgundy */
+  --brand-2: #c24b64;      /* rose accent */
+  --warn: #b4832a;         /* amber */
+  --danger: #a51d37;       /* red-wine */
+  --ok: #4e7a58;           /* sage */
+
+  --serif: "Playfair Display", "Times New Roman", Georgia, serif;
+  --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --black-letter: "UnifrakturCook", var(--serif);
 }
 
 html, body {
   background: var(--bg);
-  color: var(--text);
+  color: var(--body);
+  font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 @layer base {
   body {
+    /* Soft liquid-pink light, like ink spreading through water. */
     background:
-      radial-gradient(1200px 600px at 100% -10%, rgba(34, 211, 238, 0.08), transparent),
-      radial-gradient(900px 500px at -10% 10%, rgba(52, 211, 153, 0.08), transparent),
+      radial-gradient(1100px 700px at 110% -12%, rgba(194, 75, 100, 0.10), transparent 60%),
+      radial-gradient(900px 620px at -12% 8%, rgba(243, 201, 214, 0.28), transparent 60%),
       var(--bg);
     min-height: 100vh;
   }
-  a { color: inherit; }
+  a { color: inherit; text-decoration: none; }
+  h1, h2, h3 { font-family: var(--serif); color: var(--text); font-weight: 600; letter-spacing: -0.01em; }
+  ::selection { background: var(--pink); color: var(--brand-ink); }
 }
+
+/* Editorial type helpers */
+.serif { font-family: var(--serif); color: var(--text); letter-spacing: -0.01em; }
+.display { font-family: var(--serif); color: var(--text); font-weight: 600; line-height: 1.02; letter-spacing: -0.015em; }
+.black-letter { font-family: var(--black-letter); font-weight: 700; letter-spacing: 0.01em; }
+.eyebrow {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--brand);
+}
+.mono { font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.86em; }
 
 @layer components {
   .card {
-    background: linear-gradient(180deg, var(--panel), var(--panel-2));
+    background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 16px;
+    border-radius: 14px;
+    box-shadow: 0 1px 0 rgba(122, 15, 46, 0.03), 0 18px 40px -30px rgba(42, 12, 24, 0.25);
   }
   .chip {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 3px 10px;
+    padding: 4px 11px;
     border-radius: 999px;
     font-size: 12px;
     font-weight: 600;
+    color: var(--body);
     border: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.6);
   }
   .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 9px 16px;
+    padding: 10px 18px;
     border-radius: 10px;
+    font-family: var(--sans);
     font-weight: 600;
     font-size: 14px;
-    border: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.04);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    background: transparent;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
   }
-  .btn:hover { background: rgba(255, 255, 255, 0.09); }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn:hover { background: rgba(122, 15, 46, 0.05); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0) scale(0.99); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
   .btn-primary {
-    background: linear-gradient(180deg, var(--brand), #10b981);
-    border-color: transparent;
-    color: #042016;
+    background: var(--brand);
+    border-color: var(--brand);
+    color: #fdeef2;
+    box-shadow: 0 10px 24px -14px rgba(122, 15, 46, 0.7);
   }
-  .btn-primary:hover { filter: brightness(1.06); background: linear-gradient(180deg, var(--brand), #10b981); }
-  .btn-danger { border-color: rgba(248,113,113,0.4); color: var(--danger); }
+  .btn-primary:hover { background: var(--brand-ink); color: #fff; }
+  .btn-danger { border-color: rgba(165, 29, 55, 0.4); color: var(--danger); background: transparent; }
+  .btn-danger:hover { background: rgba(165, 29, 55, 0.06); }
+
   .input, .textarea, .select {
     width: 100%;
     background: var(--panel-2);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 10px 12px;
+    padding: 11px 13px;
     color: var(--text);
+    font-family: var(--sans);
     font-size: 14px;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
   }
+  .input::placeholder, .textarea::placeholder { color: #b89aa2; }
   .input:focus, .textarea:focus, .select:focus {
     outline: none;
     border-color: var(--brand);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(194, 75, 100, 0.14);
   }
-  .label { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 6px; display:block; text-transform: uppercase; letter-spacing: 0.04em; }
+  .label {
+    font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 6px;
+    display: block; text-transform: uppercase; letter-spacing: 0.14em;
+  }
+
+  /* Confidence / allocation meter */
+  .meter { height: 6px; border-radius: 999px; background: var(--pink-ink); overflow: hidden; }
+  .meter > span { display: block; height: 100%; border-radius: 999px; background: var(--brand); }
+
+  /* Thin editorial rule */
+  .hr { height: 1px; background: var(--border); border: 0; }
 }
 
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+/* Liquid ribbon accent — a slow-drifting pink gradient blob (pure CSS, no WebGL). */
+.ribbon {
+  position: absolute;
+  inset: auto;
+  pointer-events: none;
+  filter: blur(26px);
+  opacity: 0.55;
+  background:
+    radial-gradient(60% 60% at 30% 40%, rgba(194, 75, 100, 0.55), transparent 70%),
+    radial-gradient(50% 50% at 70% 60%, rgba(243, 201, 214, 0.8), transparent 70%);
+  animation: ribbon-drift 16s ease-in-out infinite alternate;
+}
+@keyframes ribbon-drift {
+  0%   { transform: translate3d(0,0,0) rotate(0deg) scale(1); }
+  50%  { transform: translate3d(2%, -3%, 0) rotate(6deg) scale(1.06); }
+  100% { transform: translate3d(-2%, 2%, 0) rotate(-4deg) scale(1.02); }
+}
+
+/* Orchestrated reveal (one deliberate entrance, not fade-up on everything) */
+.reveal { opacity: 0; transform: translateY(14px); }
+.reveal.in { opacity: 1; transform: none; transition: opacity 0.6s cubic-bezier(0.22,0.61,0.36,1), transform 0.6s cubic-bezier(0.22,0.61,0.36,1); }
+.reveal-1.in { transition-delay: 0.06s; }
+.reveal-2.in { transition-delay: 0.12s; }
+.reveal-3.in { transition-delay: 0.18s; }
+.reveal-4.in { transition-delay: 0.24s; }
+
+/* Clip-mask headline rise */
+.rise { overflow: hidden; }
+.rise > span { display: inline-block; transform: translateY(100%); animation: rise-up 0.75s cubic-bezier(0.22,0.61,0.36,1) forwards; }
+@keyframes rise-up { to { transform: translateY(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ribbon { animation: none; }
+  .reveal, .reveal.in { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .rise > span { animation: none; transform: none; }
+  * { scroll-behavior: auto !important; }
+}

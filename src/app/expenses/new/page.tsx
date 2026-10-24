@@ -7,8 +7,9 @@ export default async function NewExpensePage() {
   const campaigns = await listCampaigns();
   return (
     <div>
-      <h1 style={{ fontSize: 24, fontWeight: 900 }}>Submit an Expense</h1>
-      <p style={{ color: "var(--muted)", maxWidth: 680, marginTop: 6, marginBottom: 18 }}>
+      <div className="eyebrow" style={{ marginBottom: 10 }}>Vendor payment request</div>
+      <h1 className="display" style={{ fontSize: "clamp(30px, 4vw, 46px)" }}>Create a payment request.</h1>
+      <p style={{ color: "var(--body)", maxWidth: 680, marginTop: 12, marginBottom: 30, fontSize: 15.5, lineHeight: 1.6 }}>
         Upload the invoice, receipt or a photo of completion. Gemma reads the evidence, the agents check it
         against the funding rules and the live budget, and a human confirms before any transfer.
       </p>

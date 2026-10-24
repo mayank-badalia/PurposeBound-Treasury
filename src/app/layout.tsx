@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
+import Nav from "@/components/Nav";
 import { gemmaMode } from "@/lib/gemma";
 import { razorpayMode } from "@/lib/razorpay";
 import { chainConfigured } from "@/lib/hash";
@@ -12,27 +13,11 @@ export const metadata: Metadata = {
   description: "Every rupee connected to its promised purpose.",
 };
 
-const NAV = [
-  { href: "/", label: "Dashboard" },
-  { href: "/rules", label: "Rule Builder" },
-  { href: "/expenses/new", label: "Submit Expense" },
-  { href: "/approvals", label: "Approvals" },
-  { href: "/synthetic", label: "Synthetic Data" },
-];
-
-function ModeBadge({ label, mode, live }: { label: string; mode: string; live: boolean }) {
+function StatusDot({ label, mode, live }: { label: string; mode: string; live: boolean }) {
   return (
-    <span className="chip" title={`${label}: ${mode}`}>
-      <span
-        style={{
-          width: 7,
-          height: 7,
-          borderRadius: 999,
-          background: live ? "var(--ok)" : "var(--warn)",
-          display: "inline-block",
-        }}
-      />
-      {label}: <span style={{ color: live ? "var(--ok)" : "var(--warn)" }}>{mode}</span>
+    <span className="chip" title={`${label}: ${mode}`} style={{ padding: "3px 9px", fontSize: 11, background: "rgba(255,255,255,0.5)" }}>
+      <span style={{ width: 6, height: 6, borderRadius: 999, background: live ? "var(--ok)" : "var(--warn)", display: "inline-block" }} />
+      {label} <span style={{ color: live ? "var(--ok)" : "var(--warn)", fontWeight: 600 }}>{mode}</span>
     </span>
   );
 }
@@ -45,58 +30,56 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const driveReady = driveConfigured();
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Inter:wght@400;500;600;700&family=UnifrakturCook:wght@700&family=DM+Mono:wght@400;500&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body>
         <header
           style={{
             borderBottom: "1px solid var(--border)",
-            background: "rgba(10,15,30,0.7)",
-            backdropFilter: "blur(8px)",
+            background: "rgba(252, 245, 238, 0.82)",
+            backdropFilter: "blur(10px)",
             position: "sticky",
             top: 0,
             zIndex: 50,
           }}
         >
-          <div style={{ maxWidth: 1180, margin: "0 auto", padding: "14px 20px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-              <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-                <span
-                  style={{
-                    width: 30, height: 30, borderRadius: 9,
-                    background: "linear-gradient(135deg, var(--brand), var(--brand-2))",
-                    display: "grid", placeItems: "center", color: "#042016", fontWeight: 800,
-                  }}
-                >
-                  ₹
+          <div style={{ maxWidth: 1220, margin: "0 auto", padding: "16px 24px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
+              <Link href="/" style={{ display: "flex", alignItems: "baseline", gap: 9 }}>
+                <span className="black-letter" style={{ fontSize: 27, color: "var(--brand)", lineHeight: 1 }}>
+                  PurposeBound
                 </span>
-                <span style={{ fontWeight: 800, fontSize: 16 }}>
-                  PurposeBound <span style={{ color: "var(--brand)" }}>Treasury</span>
+                <span className="serif" style={{ fontSize: 23, fontWeight: 500, color: "var(--text)" }}>
+                  Treasury
                 </span>
               </Link>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <ModeBadge label="Gemma" mode={gemma === "gemma" ? "live API" : "offline fallback"} live={gemma === "gemma"} />
-                <ModeBadge label="Razorpay" mode={rzp === "sandbox" ? "sandbox" : "mock"} live={rzp === "sandbox"} />
-                <ModeBadge label="Chain" mode={chain ? "on-chain" : "simulated"} live={chain} />
+              <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
+                <StatusDot label="Gemma" mode={gemma === "gemma" ? "live" : "offline"} live={gemma === "gemma"} />
+                <StatusDot label="Razorpay" mode={rzp === "sandbox" ? "sandbox" : "mock"} live={rzp === "sandbox"} />
+                <StatusDot label="Chain" mode={chain ? "on-chain" : "simulated"} live={chain} />
                 {driveConn ? (
-                  <ModeBadge label="Drive" mode={driveConn.email ? "connected" : "connected"} live={true} />
+                  <StatusDot label="Drive" mode="connected" live={true} />
                 ) : driveReady ? (
-                  <a className="chip" href="/api/auth/google" style={{ color: "var(--brand-2)", borderColor: "var(--brand-2)" }}>
-                    Connect Google Drive
+                  <a className="chip" href="/api/auth/google" style={{ padding: "3px 9px", fontSize: 11, color: "var(--brand)", borderColor: "var(--brand-2)" }}>
+                    Connect Drive
                   </a>
                 ) : (
-                  <ModeBadge label="Drive" mode="not set" live={false} />
+                  <StatusDot label="Drive" mode="not set" live={false} />
                 )}
               </div>
             </div>
-            <nav style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" }}>
-              {NAV.map((n) => (
-                <Link key={n.href} href={n.href} className="btn" style={{ padding: "7px 13px" }}>
-                  {n.label}
-                </Link>
-              ))}
-            </nav>
+            <div style={{ marginTop: 14 }}>
+              <Nav />
+            </div>
           </div>
         </header>
-        <main style={{ maxWidth: 1180, margin: "0 auto", padding: "26px 20px 80px" }}>{children}</main>
+        <main style={{ maxWidth: 1220, margin: "0 auto", padding: "30px 24px 90px" }}>{children}</main>
       </body>
     </html>
   );

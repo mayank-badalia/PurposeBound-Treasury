@@ -35,7 +35,7 @@ export function Findings({ review }: { review: AgentReview }) {
           </div>
         ))}
       </div>
-      <div style={{ marginTop: 12, padding: 12, borderRadius: 12, background: "rgba(34,211,238,0.07)", border: "1px solid var(--border)" }}>
+      <div style={{ marginTop: 12, padding: 12, borderRadius: 12, background: "var(--pink)", border: "1px solid var(--border)" }}>
         <div style={{ fontSize: 12, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>
           Auditor rationale · anomaly score {review.anomalyScore}
         </div>

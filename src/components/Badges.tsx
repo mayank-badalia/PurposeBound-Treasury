@@ -12,11 +12,11 @@ function Pill({ text, color }: { text: string; color: string }) {
 }
 
 const C = {
-  ok: "#34d399",
-  warn: "#f59e0b",
-  danger: "#f87171",
-  info: "#22d3ee",
-  muted: "#94a3c4",
+  ok: "#4e7a58",     // sage
+  warn: "#b4832a",   // amber
+  danger: "#a51d37", // red-wine
+  info: "#c24b64",   // rose
+  muted: "#94727b",  // mauve
 };
 
 export function VerificationBadge({ v }: { v?: string }) {

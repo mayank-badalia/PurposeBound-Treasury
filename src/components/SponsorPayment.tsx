@@ -86,7 +86,7 @@ export default function SponsorPayment({ campaignId }: { campaignId: string }) {
         name: "PurposeBound Treasury",
         description: `Sponsor contribution — ${o.campaign_name}`,
         prefill: { name: sponsor },
-        theme: { color: "#34d399" },
+        theme: { color: "#7a0f2e" },
         handler: async (resp: RzpResponse) => {
           // 3. Verify the signature server-side, then credit the campaign.
           const v = await fetch("/api/razorpay/verify", {

@@ -11,8 +11,9 @@ export default async function SyntheticPage() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 900 }}>Synthetic Data Engine</h1>
-          <p style={{ color: "var(--muted)", maxWidth: 680, marginTop: 6 }}>
+          <div className="eyebrow" style={{ marginBottom: 10 }}>Reproducible fixtures</div>
+          <h1 className="display" style={{ fontSize: "clamp(28px, 4vw, 42px)" }}>Synthetic Data Engine</h1>
+          <p style={{ color: "var(--body)", maxWidth: 680, marginTop: 12, fontSize: 15.5, lineHeight: 1.6 }}>
             Deterministic fixtures for the whole verified chain. All records are clearly labelled synthetic —
             no real people, credentials or confidential data.
           </p>

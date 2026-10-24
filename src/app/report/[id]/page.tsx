@@ -21,12 +21,15 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
-      <div className="card" style={{ padding: 22 }}>
-        <div className="chip" style={{ marginBottom: 8 }}>Verifiable Transparency Report</div>
-        <h1 style={{ fontSize: 24, fontWeight: 900 }}>{report.campaign.name}</h1>
-        <p style={{ fontSize: 15, marginTop: 10, lineHeight: 1.5 }}>{report.narrative}</p>
-        <div className="chip" style={{ marginTop: 10, fontSize: 11 }}>
-          narrative: {report.narrativeSource === "gemma" ? "Gemma" : "deterministic"}
+      <div className="card" style={{ padding: "34px 36px", position: "relative", overflow: "hidden", background: "linear-gradient(135deg, #fffdfb 0%, #fdeef1 100%)" }}>
+        <div className="ribbon" style={{ width: 420, height: 260, right: -100, top: -60 }} />
+        <div style={{ position: "relative" }}>
+          <div className="eyebrow" style={{ marginBottom: 10 }}>Transparency · {report.campaign.name}</div>
+          <h1 className="display" style={{ fontSize: "clamp(30px, 4.5vw, 52px)" }}>A promise, accounted for.</h1>
+          <p style={{ fontSize: 16, marginTop: 14, lineHeight: 1.6, maxWidth: 720, color: "var(--body)" }}>{report.narrative}</p>
+          <div className="chip" style={{ marginTop: 14, fontSize: 11 }}>
+            narrative: {report.narrativeSource === "gemma" ? "Gemma" : "deterministic"}
+          </div>
         </div>
       </div>
 
@@ -37,9 +40,9 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           ["Approved · unpaid", inr(report.committed), "var(--brand-2)"],
           ["Remaining", inr(report.remaining), "var(--warn)"],
         ].map(([l, v, c]) => (
-          <div key={l} className="card" style={{ padding: 16 }}>
+          <div key={l} className="card" style={{ padding: "18px 20px" }}>
             <div className="label" style={{ margin: 0 }}>{l}</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: c, marginTop: 4 }}>{v}</div>
+            <div className="serif" style={{ fontSize: 30, fontWeight: 600, color: c, marginTop: 6, lineHeight: 1 }}>{v}</div>
           </div>
         ))}
       </div>
