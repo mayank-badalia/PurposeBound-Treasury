@@ -11,11 +11,16 @@
 
 export type GemmaMode = "gemma" | "fallback";
 
-export function gemmaMode(): GemmaMode {
-  return process.env.GEMMA_API_KEY ? "gemma" : "fallback";
+// Accept either env name (GEMINI_API_KEY is Google AI Studio's convention).
+function apiKey(): string | undefined {
+  return process.env.GEMINI_API_KEY || process.env.GEMMA_API_KEY;
 }
 
-const MODEL = process.env.GEMMA_MODEL || "gemma-3-27b-it";
+export function gemmaMode(): GemmaMode {
+  return apiKey() ? "gemma" : "fallback";
+}
+
+const MODEL = process.env.GEMMA_MODEL || "gemma-4-26b-a4b-it";
 
 // Low-level call to the Google Generative Language REST API. Returns raw text
 // or throws. Only reached when GEMMA_API_KEY is set.
@@ -23,8 +28,8 @@ export async function callGemma(
   prompt: string,
   opts: { image?: { mimeType: string; base64: string }; json?: boolean } = {},
 ): Promise<string> {
-  const key = process.env.GEMMA_API_KEY;
-  if (!key) throw new Error("GEMMA_API_KEY not set");
+  const key = apiKey();
+  if (!key) throw new Error("GEMINI_API_KEY / GEMMA_API_KEY not set");
 
   const parts: Record<string, unknown>[] = [{ text: prompt }];
   if (opts.image) {
@@ -34,21 +39,35 @@ export async function callGemma(
   }
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts }],
-      generationConfig: opts.json
-        ? { responseMimeType: "application/json", temperature: 0.2 }
-        : { temperature: 0.4 },
-    }),
+  const payload = JSON.stringify({
+    contents: [{ parts }],
+    generationConfig: opts.json
+      ? { responseMimeType: "application/json", temperature: 0.2 }
+      : { temperature: 0.4 },
   });
-  if (!res.ok) throw new Error(`Gemma API ${res.status}: ${await res.text()}`);
+
+  // Retry transient Google-side errors (500/503) and rate limits (429).
+  let res!: Response;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: payload,
+    });
+    if (res.ok) break;
+    if (![500, 502, 503, 429].includes(res.status) || attempt === 2) {
+      throw new Error(`Gemma API ${res.status}: ${await res.text()}`);
+    }
+    await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+  }
   const data = (await res.json()) as {
-    candidates?: { content?: { parts?: { text?: string }[] } }[];
+    candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[];
   };
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  // gemma-4 is a reasoning model: it returns hidden "thought" parts alongside
+  // the answer. Keep only the real answer parts, never the chain-of-thought.
+  const respParts = data.candidates?.[0]?.content?.parts ?? [];
+  const answer = respParts.filter((p) => !p.thought).map((p) => p.text ?? "").join("").trim();
+  return answer || respParts.map((p) => p.text ?? "").join("").trim();
 }
 
 // Safe wrapper: try Gemma, fall back to a deterministic value on any failure.
@@ -64,6 +83,15 @@ export async function withGemma<T>(
     }
   }
   return { value: fallback(), source: "fallback" };
+}
+
+// Defensive currency sanitiser: LLMs often render INR amounts with a "$". All
+// money in this app is Indian Rupees, so force ₹ and fix dollar/USD wording.
+export function sanitizeCurrency(s: string): string {
+  return s
+    .replace(/(?:US)?\$\s?(?=\d)/g, "₹")
+    .replace(/\bUSD\b/g, "INR")
+    .replace(/\bdollars?\b/gi, "rupees");
 }
 
 export function tryParseJson<T>(text: string): T | null {

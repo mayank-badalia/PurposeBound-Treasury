@@ -40,7 +40,8 @@ export async function validateCampaign(campaignId: string): Promise<ValidationSu
   const results: ScenarioResult[] = [];
 
   for (const expense of withExpected) {
-    const review = await runReview({ expense, rules, funds, campaignExpenses: expenses });
+    // Deterministic review (no Gemma call) — validation must be free & fast.
+    const review = await runReview({ expense, rules, funds, campaignExpenses: expenses }, { llm: false });
     const expected = {
       verification: expense.expected!.verification,
       recommendation: expense.expected!.recommendation,

@@ -14,7 +14,7 @@
 import { analyzeEvidence } from "./evidence";
 import { assessImpact, computePosition } from "./budget";
 import { scoreAnomaly } from "./anomaly";
-import { callGemma, withGemma } from "./gemma";
+import { callGemma, sanitizeCurrency, withGemma } from "./gemma";
 import type {
   AgentFinding,
   AgentReview,
@@ -220,7 +220,14 @@ export function recLabel(r: Recommendation): string {
 }
 
 // Run the full graph and build the AgentReview.
-export async function runReview(inputs: ReviewInputs): Promise<AgentReview> {
+// opts.llm === false forces a deterministic rationale with NO Gemma call — used
+// by automated validation/tests so large batches cost nothing. Real user
+// reviews default to llm: true and use live Gemma for the rationale prose.
+export async function runReview(
+  inputs: ReviewInputs,
+  opts: { llm?: boolean } = {},
+): Promise<AgentReview> {
+  const useLlm = opts.llm !== false;
   const s: CaseState = {
     inputs,
     findings: [],
@@ -237,16 +244,29 @@ export async function runReview(inputs: ReviewInputs): Promise<AgentReview> {
 
   // Auditor rationale: Gemma writes the human-readable summary if available,
   // else a deterministic synthesis of the findings.
+  const deterministicRationale = () =>
+    s.findings.map((f) => `${f.agent}: ${f.summary}`).join(" ");
+  if (!useLlm) {
+    return {
+      verification: s.verification,
+      findings: s.findings,
+      recommendation: s.recommendation,
+      approvedAmount: s.approvedAmount,
+      rationale: deterministicRationale(),
+      anomalyScore: s.anomalyScore,
+      reviewedAt: new Date().toISOString(),
+    };
+  }
   const { value: rationale, source } = await withGemma<string>(
     async () => {
-      const prompt = `You are the Auditor agent for a transparency treasury. Given these agent findings, write a 2-sentence plain-English rationale for the recommendation "${recLabel(s.recommendation)}". Findings: ${JSON.stringify(
+      const prompt = `You are the Auditor agent for a transparency treasury. Given these agent findings, write a 2-sentence plain-English rationale for the recommendation "${recLabel(s.recommendation)}". All amounts are Indian Rupees — use ₹, never "$" or "dollars". Findings: ${JSON.stringify(
         s.findings.map((f) => ({ agent: f.agent, verdict: f.verdict, summary: f.summary })),
       )}`;
       const t = await callGemma(prompt);
       if (!t.trim()) throw new Error("empty");
-      return t.trim();
+      return sanitizeCurrency(t.trim());
     },
-    () => s.findings.map((f) => `${f.agent}: ${f.summary}`).join(" "),
+    deterministicRationale,
   );
 
   // Mark the auditor finding's source to reflect whether Gemma wrote the prose.

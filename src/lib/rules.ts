@@ -80,15 +80,21 @@ function fallbackExtract(doc: string): DraftRule[] {
     });
   }
 
-  // forbidden categories
-  const forbidRe = /(?:no|not permitted|prohibited|forbidden|cannot be used for)[^.]*?(alcohol|personal|gift\w*|entertainment|cash withdrawal)/g;
-  while ((m = forbidRe.exec(text))) {
-    rules.push({
-      kind: "forbidden_category",
-      label: `${cap(m[1])} is not a permitted expense`,
-      category: m[1],
-    });
-  }
+  // forbidden categories — catch both word orders:
+  //   "<trigger> ... <category>"  and  "<category> ... <trigger>"
+  const CATS = "alcohol|personal|gift\\w*|entertainment|cash withdrawal";
+  const TRIG = "no|not permitted|not allowed|prohibited|forbidden|banned|not a permitted|cannot be used for";
+  const seenForbidden = new Set<string>();
+  const addForbidden = (catRaw: string) => {
+    const cat = catRaw.toLowerCase().replace(/s$/, "");
+    if (seenForbidden.has(cat)) return;
+    seenForbidden.add(cat);
+    rules.push({ kind: "forbidden_category", label: `${cap(catRaw)} is not a permitted expense`, category: cat });
+  };
+  const forbidRe = new RegExp(`(?:${TRIG})[^.]*?(${CATS})`, "g");
+  while ((m = forbidRe.exec(text))) addForbidden(m[1]);
+  const forbidRe2 = new RegExp(`(${CATS})[^.]*?(?:${TRIG})`, "g");
+  while ((m = forbidRe2.exec(text))) addForbidden(m[1]);
 
   // Sensible defaults so a thin document still yields a usable ruleset.
   if (!rules.some((r) => r.kind === "requires_invoice")) {
@@ -111,18 +117,22 @@ function cap(s: string) {
 export async function extractRules(
   campaignId: string,
   doc: string,
+  opts: { llm?: boolean } = {},
 ): Promise<{ rules: Rule[]; source: GemmaMode }> {
-  const { value, source } = await withGemma<DraftRule[]>(
-    async () => {
-      const text = await callGemma(GEMMA_PROMPT(doc), { json: true });
-      const parsed = tryParseJson<DraftRule[]>(text);
-      if (!parsed || !Array.isArray(parsed) || parsed.length === 0) {
-        throw new Error("Gemma returned no rules");
-      }
-      return parsed;
-    },
-    () => fallbackExtract(doc),
-  );
+  const useLlm = opts.llm !== false;
+  const { value, source }: { value: DraftRule[]; source: GemmaMode } = useLlm
+    ? await withGemma<DraftRule[]>(
+        async () => {
+          const text = await callGemma(GEMMA_PROMPT(doc), { json: true });
+          const parsed = tryParseJson<DraftRule[]>(text);
+          if (!parsed || !Array.isArray(parsed) || parsed.length === 0) {
+            throw new Error("Gemma returned no rules");
+          }
+          return parsed;
+        },
+        () => fallbackExtract(doc),
+      )
+    : { value: fallbackExtract(doc), source: "fallback" };
 
   const rules: Rule[] = value.map((d) => ({
     id: shortId("rule"),

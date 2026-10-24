@@ -5,6 +5,7 @@
 // live Sandbox API (test credentials, no real money). Otherwise we return
 // realistic simulated IDs so the whole chain demos offline.
 
+import { createHmac, timingSafeEqual } from "crypto";
 import { shortId } from "./hash";
 
 export type RazorpayMode = "sandbox" | "mock";
@@ -88,4 +89,64 @@ export async function routeTransfer(
     status: "processed",
     mode: "mock",
   };
+}
+
+// Verify a Razorpay Checkout callback signature:
+//   HMAC_SHA256(order_id + "|" + payment_id, key_secret) === razorpay_signature
+export function verifyPaymentSignature(
+  orderId: string,
+  paymentId: string,
+  signature: string,
+): boolean {
+  const secret = process.env.RAZORPAY_KEY_SECRET;
+  if (!secret) return false;
+  const expected = createHmac("sha256", secret).update(`${orderId}|${paymentId}`).digest("hex");
+  return safeEqualHex(expected, signature);
+}
+
+// Verify a Razorpay webhook signature: HMAC_SHA256(rawBody, webhook_secret).
+export function verifyWebhookSignature(rawBody: string, signature: string): boolean {
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  if (!secret) return false;
+  const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
+  return safeEqualHex(expected, signature);
+}
+
+function safeEqualHex(a: string, b: string): boolean {
+  try {
+    const ab = Buffer.from(a, "hex");
+    const bb = Buffer.from(b, "hex");
+    return ab.length === bb.length && timingSafeEqual(ab, bb);
+  } catch {
+    return false;
+  }
+}
+
+export interface RefundResult {
+  refundId: string;
+  paymentId: string;
+  amount: number;
+  status: string;
+  mode: RazorpayMode;
+}
+
+// Refund a captured payment (full or partial). Used for rejected contributions,
+// unused-fund returns and failed-purpose campaigns.
+export async function refundPayment(paymentId: string, amountInr?: number): Promise<RefundResult> {
+  if (razorpayMode() === "sandbox") {
+    try {
+      const res = await fetch(`https://api.razorpay.com/v1/payments/${paymentId}/refund`, {
+        method: "POST",
+        headers: { authorization: `Basic ${auth()}`, "content-type": "application/json" },
+        body: JSON.stringify(amountInr ? { amount: amountInr * 100 } : {}),
+      });
+      if (res.ok) {
+        const r = (await res.json()) as { id: string; amount: number; status: string };
+        return { refundId: r.id, paymentId, amount: (r.amount ?? 0) / 100, status: r.status, mode: "sandbox" };
+      }
+    } catch (err) {
+      console.warn("[razorpay] refund fell back to mock:", (err as Error).message);
+    }
+  }
+  return { refundId: shortId("rfnd"), paymentId, amount: amountInr ?? 0, status: "processed", mode: "mock" };
 }

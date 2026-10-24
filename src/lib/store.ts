@@ -13,6 +13,7 @@ import type {
   Evidence,
   Expense,
   Fund,
+  GoogleConnection,
   HashAnchor,
   Rule,
 } from "./types";
@@ -27,6 +28,7 @@ const EMPTY: Database = {
   funds: [],
   expenses: [],
   anchors: [],
+  google: null,
 };
 
 // Cache across hot reloads in dev via globalThis.
@@ -37,13 +39,17 @@ async function ensureDir() {
 }
 
 export async function load(): Promise<Database> {
-  if (g.__pbtDb && g.__pbtLoaded) return g.__pbtDb;
+  // ALWAYS read from disk — the file is the source of truth. A long-lived
+  // in-memory cache gets stale across requests/workers and causes numbers to
+  // drift (a write from one request isn't seen by the next). Data is tiny, so
+  // a fresh read per call is cheap and correct. The in-memory copy is only a
+  // fallback for the very first run before the file exists.
   await ensureDir();
   try {
     const raw = await fs.readFile(DB_FILE, "utf8");
     g.__pbtDb = { ...EMPTY, ...(JSON.parse(raw) as Database) };
   } catch {
-    g.__pbtDb = structuredClone(EMPTY);
+    if (!g.__pbtDb) g.__pbtDb = structuredClone(EMPTY);
   }
   g.__pbtLoaded = true;
   return g.__pbtDb;
@@ -56,9 +62,23 @@ export async function save(db: Database): Promise<void> {
 }
 
 export async function resetDb(): Promise<void> {
-  g.__pbtDb = structuredClone(EMPTY);
+  // Preserve the Google Drive connection across data resets so a connected
+  // account survives demo re-seeds.
+  const current = await load();
+  const google = current.google ?? null;
+  g.__pbtDb = { ...structuredClone(EMPTY), google };
   g.__pbtLoaded = true;
   await save(g.__pbtDb);
+}
+
+export async function getGoogle(): Promise<GoogleConnection | null> {
+  return (await load()).google ?? null;
+}
+
+export async function setGoogle(conn: GoogleConnection | null): Promise<void> {
+  const db = await load();
+  db.google = conn;
+  await save(db);
 }
 
 // ---------- Campaigns ----------
@@ -96,6 +116,27 @@ export async function addFund(f: Fund): Promise<Fund> {
   db.funds.push(f);
   await save(db);
   return f;
+}
+
+// Replace all funds for a campaign (keeps re-seeding idempotent).
+export async function replaceFunds(campaignId: string, funds: Fund[]): Promise<void> {
+  const db = await load();
+  db.funds = db.funds.filter((f) => f.campaignId !== campaignId).concat(funds);
+  await save(db);
+}
+
+// Drop a campaign's anchors (so re-seeding the same campaign doesn't pile up).
+export async function clearAnchors(campaignId: string): Promise<void> {
+  const db = await load();
+  db.anchors = db.anchors.filter((a) => a.campaignId !== campaignId);
+  await save(db);
+}
+
+// Replace all expenses for a campaign.
+export async function replaceExpenses(campaignId: string, expenses: Expense[]): Promise<void> {
+  const db = await load();
+  db.expenses = db.expenses.filter((e) => e.campaignId !== campaignId).concat(expenses);
+  await save(db);
 }
 
 // ---------- Expenses ----------

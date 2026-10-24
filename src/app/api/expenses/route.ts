@@ -3,6 +3,8 @@ import { submitExpense } from "@/lib/service";
 import { contentHash, visualFingerprint } from "@/lib/fingerprint";
 import { callGemma, gemmaMode, tryParseJson } from "@/lib/gemma";
 import { shortId } from "@/lib/hash";
+import { uploadToDrive } from "@/lib/drive";
+import { getGoogle } from "@/lib/store";
 import type { Evidence, EvidenceType } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -65,11 +67,26 @@ export async function POST(req: NextRequest) {
   const files = form.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
   const typeHints = form.getAll("types").map(String);
 
+  const driveConnected = Boolean(await getGoogle());
   const evidence: Evidence[] = [];
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     const bytes = new Uint8Array(await file.arrayBuffer());
     const type = inferType(file, typeHints[i]);
+
+    // Store the real document in Google Drive when connected; only the hash is
+    // anchored. Falls back to a simulated id if Drive isn't connected or errors.
+    let driveFileId = `drive_sim_${shortId("f").slice(2)}`;
+    if (driveConnected) {
+      try {
+        const subfolder = type === "invoice" ? "Invoices" : "Evidence";
+        const up = await uploadToDrive(file.name, file.type || "application/octet-stream", bytes, subfolder);
+        driveFileId = up.fileId;
+      } catch (err) {
+        console.warn("[drive] upload fell back to simulated:", (err as Error).message);
+      }
+    }
+
     evidence.push({
       id: shortId("ev"),
       expenseId: "", // set in submitExpense
@@ -80,7 +97,7 @@ export async function POST(req: NextRequest) {
       contentHash: contentHash(bytes),
       visualFingerprint: visualFingerprint(bytes),
       uploadedAt: new Date().toISOString(),
-      driveFileId: `drive_sim_${shortId("f").slice(2)}`,
+      driveFileId,
       extracted: await extract(file, bytes, type, { vendor, amount }),
     });
   }

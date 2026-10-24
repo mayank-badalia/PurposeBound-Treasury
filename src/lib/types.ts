@@ -177,10 +177,21 @@ export interface HashAnchor {
   createdAt: string;
 }
 
+export interface GoogleConnection {
+  email?: string;
+  accessToken: string;
+  refreshToken: string;
+  expiry: number; // epoch ms when the access token expires
+  rootFolderId?: string;
+  folders?: Record<string, string>; // "Invoices" -> folderId, etc.
+  connectedAt: string;
+}
+
 export interface Database {
   campaigns: Campaign[];
   rules: Rule[];
   funds: Fund[];
   expenses: Expense[];
   anchors: HashAnchor[];
+  google?: GoogleConnection | null;
 }

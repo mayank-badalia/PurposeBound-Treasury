@@ -13,6 +13,17 @@
 import { makeRng, seedFromString, pick, intBetween, roundRupees, type Rng } from "./rng";
 import { contentHash, visualFingerprint } from "./fingerprint";
 import { shortId } from "./hash";
+
+// Deterministic id generator so the SAME seed reproduces an identical dataset
+// (ids included). A separate rng stream is used, set at the start of each
+// synchronous build, so the record amounts/sequence stay byte-for-byte stable.
+let __idRng: Rng | null = null;
+function sid(prefix: string): string {
+  if (!__idRng) return shortId(prefix);
+  let h = "";
+  for (let i = 0; i < 16; i++) h += Math.floor(__idRng() * 16).toString(16);
+  return `${prefix}_${h}`;
+}
 import type {
   Campaign,
   Evidence,
@@ -43,7 +54,7 @@ interface EvidenceSpec {
 function makeEvidence(expenseId: string, spec: EvidenceSpec, uploadedAt: string): Evidence {
   const bytes = synthBytes(spec.seed);
   return {
-    id: shortId("ev"),
+    id: sid("ev"),
     expenseId,
     type: spec.type,
     filename: spec.filename,
@@ -52,7 +63,7 @@ function makeEvidence(expenseId: string, spec: EvidenceSpec, uploadedAt: string)
     contentHash: contentHash(bytes),
     visualFingerprint: visualFingerprint(bytes),
     uploadedAt,
-    driveFileId: `drive_sim_${shortId("f").slice(2)}`,
+    driveFileId: `drive_sim_${sid("f").slice(2)}`,
     extracted: spec.extracted,
   };
 }
@@ -66,7 +77,7 @@ export function buildRules(campaignId: string): Rule[] {
     label: string,
     extra: Partial<Rule> = {},
   ): Rule => ({
-    id: shortId("rule"),
+    id: sid("rule"),
     campaignId,
     kind,
     label,
@@ -115,7 +126,7 @@ function baseExpense(
   createdAt: string,
 ): Expense {
   return {
-    id: shortId("exp"),
+    id: sid("exp"),
     campaignId,
     category: "general",
     amount: 0,
@@ -131,14 +142,17 @@ function baseExpense(
   };
 }
 
-// Build one scenario. `cleanInvoiceSeed` lets the duplicate scenario copy the
-// clean scenario's invoice bytes exactly.
+// Build one scenario. `cleanInvoiceSeed` is the shared invoice the DUPLICATE
+// scenario copies. A "clean" expense uses it only when `isCanonicalClean` is
+// true (the single source the duplicate points at); every other clean gets a
+// unique invoice so multiple cleans never flag each other as duplicates.
 function buildScenario(
   key: ScenarioKey,
   campaignId: string,
   rng: Rng,
   order: number,
   cleanInvoiceSeed: number,
+  isCanonicalClean = false,
 ): BuiltExpense {
   const createdAt = new Date(Date.UTC(2026, 9, 20, 9, order)).toISOString(); // ordered
   const uploadedAt = createdAt;
@@ -147,6 +161,9 @@ function buildScenario(
     case "clean": {
       const vendor = pick(rng, ["FreshBite Catering", "CityEats Co", "MealWorks"]);
       const amount = roundRupees(intBetween(rng, 8000, 15000));
+      // Canonical clean uses the shared seed (the duplicate copies it); every
+      // other clean gets a unique invoice so cleans don't collide.
+      const invSeed = isCanonicalClean ? cleanInvoiceSeed : Math.floor(rng() * 1e9);
       const e = baseExpense(
         campaignId,
         {
@@ -164,14 +181,14 @@ function buildScenario(
           type: "invoice",
           filename: "catering_invoice.pdf",
           mimeType: "application/pdf",
-          seed: cleanInvoiceSeed,
+          seed: invSeed,
           extracted: { vendor, amount, date: "2026-10-20", description: "Catering services", supportsClaim: true },
         }, uploadedAt),
         makeEvidence(e.id, {
           type: "photo",
           filename: "event_lunch.jpg",
           mimeType: "image/jpeg",
-          seed: cleanInvoiceSeed + 1,
+          seed: invSeed + 1,
           extracted: { supportsClaim: true, notes: "Photo of catered lunch area" },
         }, uploadedAt),
       ];
@@ -344,12 +361,12 @@ function makeCampaign(name: string, seedLabel: string): Campaign {
 function makeFunds(campaignId: string, amount: number): Fund[] {
   return [
     {
-      id: shortId("fund"),
+      id: sid("fund"),
       campaignId,
       amount,
       source: "TechCorp Sponsorship",
-      razorpayOrderId: shortId("order"),
-      razorpayPaymentId: shortId("pay"),
+      razorpayOrderId: sid("order"),
+      razorpayPaymentId: sid("pay"),
       status: "captured",
       createdAt: new Date(Date.UTC(2026, 9, 19, 12, 30)).toISOString(),
     },
@@ -358,6 +375,7 @@ function makeFunds(campaignId: string, amount: number): Fund[] {
 
 // The stable, always-identical demonstration dataset (6 scenarios).
 export function buildFixedDataset(): Dataset {
+  __idRng = makeRng(seedFromString("fixed-demo-v1::ids")); // deterministic ids
   const campaign = makeCampaign("Innovate Hackathon 2026 (Demo)", "fixed-demo-v1");
   const rules = buildRules(campaign.id);
   const funds = makeFunds(campaign.id, CAMPAIGN_COLLECTED);
@@ -366,7 +384,7 @@ export function buildFixedDataset(): Dataset {
 
   const order = SCENARIO_META.map((m) => m.key);
   const expenses = order.map((key, i) =>
-    buildScenario(key, campaign.id, rng, i + 1, cleanInvoiceSeed).expense,
+    buildScenario(key, campaign.id, rng, i + 1, cleanInvoiceSeed, key === "clean").expense,
   );
   return { campaign, rules, funds, expenses };
 }
@@ -385,6 +403,7 @@ export function generateDataset(opts: GenerateOptions = {}): Dataset {
     ? opts.scenarioTypes
     : (SCENARIO_META.map((m) => m.key) as ScenarioKey[]);
 
+  __idRng = makeRng(seedFromString(seed + "::ids")); // deterministic ids
   const campaign = makeCampaign(`Generated Campaign (${seed})`, seed);
   const rules = buildRules(campaign.id);
   const funds = makeFunds(campaign.id, CAMPAIGN_COLLECTED);
@@ -392,8 +411,9 @@ export function generateDataset(opts: GenerateOptions = {}): Dataset {
   const cleanInvoiceSeed = Math.floor(rng() * 1e9);
 
   const expenses: Expense[] = [];
-  // Always include one clean payment first so duplicate scenarios have a source.
-  expenses.push(buildScenario("clean", campaign.id, rng, 1, cleanInvoiceSeed).expense);
+  // Always include the canonical clean payment first so duplicate scenarios
+  // have an earlier source to copy (and so its invoice is the shared one).
+  expenses.push(buildScenario("clean", campaign.id, rng, 1, cleanInvoiceSeed, true).expense);
   for (let i = 1; i < size; i++) {
     const key = pick(rng, types);
     expenses.push(buildScenario(key, campaign.id, rng, i + 1, cleanInvoiceSeed).expense);

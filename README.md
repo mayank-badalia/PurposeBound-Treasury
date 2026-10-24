@@ -62,4 +62,24 @@ npm run dev            # http://localhost:3000  (this repo was tested on PORT=33
 5. **Transparency report** — the sponsor/donor view with the hash-anchor chain.
 
 ### Optional live keys
-Copy `.env.example` → `.env.local` and set `GEMMA_API_KEY`, `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET`, and/or `CHAIN_RPC_URL` + `EVIDENCE_REGISTRY_ADDRESS`. Anything left blank stays on its labelled fallback.
+Copy `.env.example` → `.env.local`. Anything left blank stays on its labelled fallback; the header shows each integration's live/fallback state.
+
+## Integrations & backend endpoints
+
+**Gemma 4** (`gemma-4-26b-a4b-it`, Google AI Studio) — set `GEMINI_API_KEY`. The model id goes in the request path (`models/gemma-4-26b-a4b-it:generateContent`), configured via `GEMMA_MODEL`. It's a reasoning model (returns hidden `thought` parts, which the provider strips). Powers rule extraction, evidence analysis, review rationale, report narrative, and `POST /api/ai/analyse`. Automated tests/validation force deterministic mode (`llm:false`) so they make **zero** API calls; the report narrative is cached per financial state.
+
+**Razorpay Sandbox** — set `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET`.
+- `POST /api/razorpay/order` `{campaign_id, amount}` → creates an order + returns the public key for Checkout (**live**).
+- `POST /api/razorpay/verify` → HMAC-SHA256 signature check; records the contribution only when valid.
+- `POST /api/razorpay/transfer` → Route transfer to a linked account (**needs Route enabled** on the account; labeled mock otherwise).
+- `POST /api/razorpay/refund` → refund a captured payment.
+- `POST /api/webhooks/razorpay` → verifies `X-Razorpay-Signature` over the raw body (set `RAZORPAY_WEBHOOK_SECRET`; expose via ngrok for local dev).
+
+**Google Drive** (OAuth 2.0, `drive.file` scope) — set `GOOGLE_DRIVE_CLIENT_ID` / `_SECRET` / `_REDIRECT_URI`, then **one-time GCP console setup**:
+1. Enable the **Google Drive API**.
+2. OAuth consent screen: **External**, add your Gmail as a **test user**, add scope `https://www.googleapis.com/auth/drive.file`.
+3. Authorised redirect URI = `http://localhost:3000/api/auth/google/callback`.
+
+Then click **Connect Google Drive** in the header. Routes: `GET /api/auth/google`, `GET /api/auth/google/callback`, `GET /api/drive/status`, `POST /api/drive/upload`. On connect it creates the folder tree (`PurposeBound Treasury/{Agreements,Budgets,Invoices,Evidence,Reports}`); evidence uploads then store the real document in Drive and anchor only its hash.
+
+**Self-test:** `GET /api/selftest` runs 89 exact-number assertions (deterministic, no API calls).

@@ -35,8 +35,12 @@ function committedExpenses(expenses: Expense[]): Expense[] {
 }
 
 function effectiveAmount(e: Expense): number {
-  // Partially-approved expenses commit only the approved amount.
-  if (e.status === "partially_approved" && e.humanDecision) {
+  // Source-of-truth order: money that ACTUALLY moved (the transfer) wins, then
+  // the human's approved amount, then the agent's partial recommendation, then
+  // the claimed amount. This keeps "spent" exactly equal to Razorpay transfers
+  // and prevents any drift between money moved and money counted.
+  if (e.transfer) return e.transfer.amount;
+  if (e.humanDecision && e.humanDecision.approvedAmount > 0) {
     return e.humanDecision.approvedAmount;
   }
   return e.review?.recommendation === "approve_partial" && e.review.approvedAmount

@@ -5,7 +5,7 @@
 // otherwise) and the hash anchors that prove nothing was silently changed.
 
 import { computePosition } from "./budget";
-import { callGemma, withGemma, type GemmaMode } from "./gemma";
+import { callGemma, sanitizeCurrency, withGemma, type GemmaMode } from "./gemma";
 import type { Campaign, Expense, Fund, HashAnchor, Rule } from "./types";
 
 export interface TransparencyReport {
@@ -44,7 +44,9 @@ export async function buildReport(
   funds: Fund[],
   expenses: Expense[],
   anchors: HashAnchor[],
+  opts: { llm?: boolean } = {},
 ): Promise<TransparencyReport> {
+  const useLlm = opts.llm !== false;
   const pos = computePosition(funds, expenses, rules);
   const spent = pos.transferred;
   const committed = pos.approvedUnpaid;
@@ -98,21 +100,25 @@ export async function buildReport(
     expensesRejected: expenses.filter((e) => e.status === "rejected").length,
   };
 
-  const { value: narrative, source } = await withGemma<string>(
-    async () => {
-      const t = await callGemma(
-        `Write a 3-sentence donor/sponsor transparency summary for "${campaign.name}". Use plain language, mention how much was spent vs remaining and whether the declared purpose is being honoured. Facts: ${JSON.stringify(summaryFacts)}`,
-      );
-      if (!t.trim()) throw new Error("empty");
-      return t.trim();
-    },
-    () =>
-      `Of ₹${pos.collected.toLocaleString("en-IN")} collected, ₹${spent.toLocaleString("en-IN")} has been transferred to verified vendors and ₹${committed.toLocaleString("en-IN")} is approved and pending, leaving ₹${remaining.toLocaleString("en-IN")}. ${
-        compliance.every((c) => c.status !== "at_risk")
-          ? "All declared-purpose commitments are currently on track."
-          : "One or more declared-purpose commitments are at risk and flagged above."
-      } Every rule, expense, piece of evidence and transfer is hash-anchored for tamper-evident verification.`,
-  );
+  const fallbackNarrative = () =>
+    `Of ₹${pos.collected.toLocaleString("en-IN")} collected, ₹${spent.toLocaleString("en-IN")} has been transferred to verified vendors and ₹${committed.toLocaleString("en-IN")} is approved and pending, leaving ₹${remaining.toLocaleString("en-IN")}. ${
+      compliance.every((c) => c.status !== "at_risk")
+        ? "All declared-purpose commitments are currently on track."
+        : "One or more declared-purpose commitments are at risk and flagged above."
+    } Every rule, expense, piece of evidence and transfer is hash-anchored for tamper-evident verification.`;
+
+  const { value: narrative, source } = useLlm
+    ? await withGemma<string>(
+        async () => {
+          const t = await callGemma(
+            `Write a 3-sentence donor/sponsor transparency summary for "${campaign.name}". All amounts are in Indian Rupees — always write the ₹ symbol, never "$" or "dollars". Use plain language, mention how much was spent vs remaining and whether the declared purpose is being honoured. Facts (amounts in INR): ${JSON.stringify(summaryFacts)}`,
+          );
+          if (!t.trim()) throw new Error("empty");
+          return sanitizeCurrency(t.trim());
+        },
+        fallbackNarrative,
+      )
+    : { value: fallbackNarrative(), source: "fallback" as const };
 
   return {
     campaign,

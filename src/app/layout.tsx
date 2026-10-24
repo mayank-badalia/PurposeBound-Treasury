@@ -4,6 +4,8 @@ import "./globals.css";
 import { gemmaMode } from "@/lib/gemma";
 import { razorpayMode } from "@/lib/razorpay";
 import { chainConfigured } from "@/lib/hash";
+import { driveConfigured } from "@/lib/drive";
+import { getGoogle } from "@/lib/store";
 
 export const metadata: Metadata = {
   title: "PurposeBound Treasury",
@@ -35,10 +37,12 @@ function ModeBadge({ label, mode, live }: { label: string; mode: string; live: b
   );
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const gemma = gemmaMode();
   const rzp = razorpayMode();
   const chain = chainConfigured();
+  const driveConn = await getGoogle();
+  const driveReady = driveConfigured();
   return (
     <html lang="en">
       <body>
@@ -72,6 +76,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <ModeBadge label="Gemma" mode={gemma === "gemma" ? "live API" : "offline fallback"} live={gemma === "gemma"} />
                 <ModeBadge label="Razorpay" mode={rzp === "sandbox" ? "sandbox" : "mock"} live={rzp === "sandbox"} />
                 <ModeBadge label="Chain" mode={chain ? "on-chain" : "simulated"} live={chain} />
+                {driveConn ? (
+                  <ModeBadge label="Drive" mode={driveConn.email ? "connected" : "connected"} live={true} />
+                ) : driveReady ? (
+                  <a className="chip" href="/api/auth/google" style={{ color: "var(--brand-2)", borderColor: "var(--brand-2)" }}>
+                    Connect Google Drive
+                  </a>
+                ) : (
+                  <ModeBadge label="Drive" mode="not set" live={false} />
+                )}
               </div>
             </div>
             <nav style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" }}>
